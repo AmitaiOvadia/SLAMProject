@@ -7,7 +7,7 @@ import random
 NUMBER_OF_FEATURES = 128
 NUMBER_OF_FEATURES_TO_SHOW = 500
 RATIO = 0.4
-DATA_PATH = r'C:\Users\amita\OneDrive\Desktop\master\year 2\SLAM\SLAMProject\VAN_ex\dataset\sequences\00'
+DATA_PATH = r'/VAN_ex/dataset/sequences/00'
 
 
 def read_images(idx):
