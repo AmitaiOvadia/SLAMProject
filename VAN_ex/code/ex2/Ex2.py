@@ -113,27 +113,31 @@ def check_times():
     good_matches = [match for match, is_good in zip(matches, good_matches_inds) if is_good]
     points_a, points_b = get_points_from_matches(good_matches, key_points_1, key_points_2)
 
+    num_iterations = 100
     # Test 1: My implementation
     start_time = time.time()
-    X_3d_per_pair = utils.triangulate_points_per_pair(P1, P2, points_a, points_b)
+    for _ in range(num_iterations):
+        X_3d_per_pair = utils.triangulate_points_per_pair(P1, P2, points_a, points_b)
     end_time = time.time()
-    time_mine = end_time - start_time
+    time_naive = (end_time - start_time) / num_iterations
 
     # Test 2: No loops implementation
     start_time = time.time()
-    x_3d_test = utils.triangulate_points(P1, P2, points_a, points_b)
+    for _ in range(num_iterations):
+        x_3d_test = utils.triangulate_points(P1, P2, points_a, points_b)
     end_time = time.time()
-    time_no_loops = end_time - start_time
+    time_mine = (end_time - start_time)/num_iterations
 
     # Test 3: OpenCV implementation
     start_time = time.time()
-    x_3d_opencv = utils.triangulate_using_opencv(P1, P2, points_a, points_b)
+    for _ in range(num_iterations):
+        x_3d_opencv = utils.triangulate_using_opencv(P1, P2, points_a, points_b)
     end_time = time.time()
-    time_opencv = end_time - start_time
+    time_opencv = (end_time - start_time) / num_iterations
 
-    print(f"Time for my implementation: {time_mine} seconds")
-    print(f"Time for no loops implementation: {time_no_loops} seconds")
-    print(f"Time for OpenCV implementation: {time_opencv} seconds")
+    print(f"Time for (1) naive implementation: {time_naive :8f} seconds")
+    print(f"Time for (2) no loops implementation: {time_mine :8f} seconds")
+    print(f"Time for (3) OpenCV implementation: {time_opencv :8f} seconds")
 
 
 def evaluate_random_y_distribution(key_points_1, key_points_2, matches):
@@ -271,8 +275,5 @@ def Q24():
         display_points_cloud(x_3d_mine, case=f"image pair {image_pair}")
 
 if __name__ == "__main__":
-    Q21()
-    Q22()
-    Q23()
-    Q24()
+    check_times()
 

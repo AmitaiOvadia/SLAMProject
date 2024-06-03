@@ -90,7 +90,6 @@ def get_pixels_from_matches(key_points_1, key_points_2, match):
     return x1, x2, y1, y2
 
 
-
 def triangulate_pair(Pa, Pb, point_a, point_b):
     A = np.zeros((4, 4))
     p1a, p2a, p3a = Pa[0, :], Pa[1, :], Pa[2, :]
