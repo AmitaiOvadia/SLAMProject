@@ -113,7 +113,7 @@ def check_times():
     good_matches = [match for match, is_good in zip(matches, good_matches_inds) if is_good]
     points_a, points_b = get_points_from_matches(good_matches, key_points_1, key_points_2)
 
-    num_iterations = 100
+    num_iterations = 1000
     # Test 1: My implementation
     start_time = time.time()
     for _ in range(num_iterations):
@@ -255,6 +255,7 @@ def Q23():
     median = np.median(dists, axis=0)
     print(f"The median distance between the 3D points triangulated using\n"
           f"OpenCV function and my function is {median} meters")
+
 
 def Q24():
     """
