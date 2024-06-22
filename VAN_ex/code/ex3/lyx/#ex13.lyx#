@@ -1,0 +1,1058 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\begin_preamble
+% Necessary Commands:
+\usepackage{autobreak}
+\usepackage{relsize}
+% Set vertical space before and after dislpay equations to be longer for better redability:
+\AtBeginDocument{\setlength\abovedisplayskip{12pt}}
+\AtBeginDocument{\setlength\belowdisplayskip{12pt}}
+\AtBeginDocument{\setlength\belowdisplayshortskip{12pt}}
+\AtBeginDocument{\setlength\belowdisplayshortskip{12pt}}
+
+% Set space between words to be wider:
+\spaceskip=1.3\fontdimen2\font plus 1\fontdimen3\font minus 1.5\fontdimen4\font
+
+% Convert the Lyx colors into more pleasent colors:
+\usepackage{xcolor}
+\definecolor{blue}{RGB}{12,97,197}
+\definecolor{green}{RGB}{0,128,40}
+\definecolor{red}{RGB}{235,16,16}
+\definecolor{brown}{RGB}{154,58,0}
+\definecolor{orange}{RGB}{231,135,26}
+\definecolor{purple}{RGB}{94,53,177}
+
+% Convert the QED Symbol at the end of proofs to a solid black square (credit: Yakir Oz):
+\usepackage{amssymb}
+\renewcommand{\qedsymbol}{$\blacksquare$}
+
+% Make the layout more similar to Hebrew Article, which I am more used to:
+\renewcommand*{\@seccntformat}[1]{\hspace{0.5cm}\csname the#1\endcsname\hspace{0.5cm}} 
+\usepackage{titlesec}
+\titleformat{\section}{\fontsize{20}{20}\bfseries}{\thesection}{10pt}{}
+\titleformat{\subsection}{\fontsize{15}{15}\bfseries}{\thesubsection}{10pt}{}
+\titleformat{\subsubsection}{\bfseries}{\thesubsubsection}{10pt}{}
+
+% Create disjoint union symbols:
+\makeatletter
+\def\moverlay{\mathpalette\mov@rlay}
+\def\mov@rlay#1#2{\leavevmode\vtop{%
+   \baselineskip\z@skip \lineskiplimit-\maxdimen
+   \ialign{\hfil$\m@th#1##$\hfil\cr#2\crcr}}}
+\newcommand{\charfusion}[3][\mathord]{
+    #1{\ifx#1\mathop\vphantom{#2}\fi
+        \mathpalette\mov@rlay{#2\cr#3}
+      }
+    \ifx#1\mathop\expandafter\displaylimits\fi}
+\makeatother
+\newcommand{\cupdot}{\charfusion[\mathbin]{\cup}{\cdot}}
+\newcommand{\bigcupdot}{\charfusion[\mathop]{\bigcup}{\cdot}}
+
+\newcommand{\kaliLargeLand}{\mathop{\mathlarger{\mathlarger{\mathlarger{\land}}}}}
+\end_preamble
+\use_default_options true
+\begin_modules
+theorems-ams
+\end_modules
+\maintain_unincluded_children false
+\begin_local_layout
+Style Section
+	Font
+	  Series     Medium
+	  Shape      Smallcaps
+	  Size       Larger
+	  Series     Bold
+	EndFont
+	TocLevel 1
+End
+
+
+Style Section*
+	Font
+	  Series     Medium
+	  Shape      Smallcaps
+	  Size      Larger
+	  Series     Bold
+	EndFont
+End
+
+
+Style Solution
+
+	LabelString           "פיתרון: "
+End
+
+
+Style Notation
+
+	LabelString           "סימון  \thetheorem: "
+End
+
+Style Theorem
+
+	LabelString           "משפט \thetheorem: "
+End
+
+Style Property
+
+	LabelString           "תזכורת: "
+End
+\end_local_layout
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "David"
+\font_sans "default" "David"
+\font_typewriter "default" "David"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing onehalf
+\use_hyperref true
+\pdf_bookmarks true
+\pdf_bookmarksnumbered false
+\pdf_bookmarksopen false
+\pdf_bookmarksopenlevel 1
+\pdf_breaklinks false
+\pdf_pdfborder false
+\pdf_colorlinks false
+\pdf_backref false
+\pdf_pdfusetitle true
+\papersize default
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 1cm
+\topmargin 2cm
+\rightmargin 1cm
+\bottommargin 3cm
+\headheight 0cm
+\headsep 0cm
+\footskip 2cm
+\secnumdepth -2
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation 0bp
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset Box Doublebox
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "100col%"
+special "none"
+height "1in"
+height_special "totalheight"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+\begin_inset CommandInset include
+LatexCommand include
+filename "../../../../../AppData/Roaming/LyX2.3/bind"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+
+\size giant
+Vision Aided Navigation 2024 - Exercise 3
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+
+\size larger
+Amitai ovadia - 312244254
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+today
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space \space{}
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Question 3.2
+\end_layout
+
+\begin_layout Standard
+Here are some points that were matched across the 2 stereo pairs:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted1.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Question 3.3
+\end_layout
+
+\begin_layout Itemize
+Describe how to define from [𝑅|𝑡] a transformation 𝑇 that transforms from
+ left0 coordinates to left1 coordinates:
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+If we have a coordinate system for 
+\begin_inset Formula $left0$
+\end_inset
+
+ 
+\begin_inset Formula $R_{0},t_{0}$
+\end_inset
+
+ and for 
+\begin_inset Formula $left1$
+\end_inset
+
+ we need to rotate by 
+\begin_inset Formula $R_{1}$
+\end_inset
+
+ and then translate in 
+\begin_inset Formula $t_{1}$
+\end_inset
+
+ we need to, 
+\end_layout
+
+\begin_layout Standard
+given 
+\begin_inset Formula $x_{0}$
+\end_inset
+
+ in 
+\begin_inset Formula $0$
+\end_inset
+
+ cordinate system: 
+\begin_inset Formula $x_{1}=R_{1}x_{0}+t_{1}$
+\end_inset
+
+ 
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+The question:
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted2.png
+	scale 60
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We can defind a matrix 
+\begin_inset Formula $T=\left[\begin{array}{cc}
+R & t\\
+0 & 1
+\end{array}\right]\in\mathbb{R}^{4\times4}$
+\end_inset
+
+ such that given 
+\begin_inset Formula $x$
+\end_inset
+
+ in homogeneous coordinates 
+\begin_inset Formula $x_{hom}=\left[\begin{array}{c}
+x\\
+y\\
+z\\
+1
+\end{array}\right]$
+\end_inset
+
+ 
+\end_layout
+
+\begin_layout Standard
+then 
+\begin_inset Formula $Tx_{hom}=Rx+t$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+And so 
+\begin_inset Formula $T_{A\rightarrow B}=\left[\begin{array}{cc}
+R_{1} & t_{1}\\
+0 & 1
+\end{array}\right],T_{B\rightarrow C}=\left[\begin{array}{cc}
+R_{2} & t_{2}\\
+0 & 1
+\end{array}\right]$
+\end_inset
+
+ and 
+\begin_inset Formula $T_{A\rightarrow C}=T_{B\rightarrow C}T_{A\rightarrow B}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\Rightarrow T_{A\rightarrow C}x=R_{2}\left(R_{1}x+t_{1}\right)+t_{2}$
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+Question:
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted3.png
+	scale 60
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The meaning of 
+\begin_inset Formula $R,t$
+\end_inset
+
+ are the rigid transformation of some 3D point to the camera coordinates,
+ 
+\end_layout
+
+\begin_layout Standard
+in which the camera center lies in 
+\begin_inset Formula $\left[\begin{array}{ccc}
+0 & 0 & 0\end{array}\right]^{T}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+So the camera center should be translated exacly to the 
+\begin_inset Formula $0$
+\end_inset
+
+ point.
+\end_layout
+
+\begin_layout Standard
+This is why 
+\begin_inset Formula $Tx_{c}=0$
+\end_inset
+
+ for 
+\begin_inset Formula $x_{c}$
+\end_inset
+
+ the camera center.
+\end_layout
+
+\begin_layout Standard
+and so:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $Rx_{c}+t=0$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\Rightarrow Rx_{c}=-t$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\Rightarrow x_{c}=-R^{T}t$
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Here are the relative positions of the four cameras:
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+After using p4p to get the extrinsic matrix of the left1 camera from a random
+ set of 4 points.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted5.png
+	scale 60
+
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+\begin_inset Separator plain
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Question 3.4
+\end_layout
+
+\begin_layout Itemize
+I used the same extrinsic camera matrices from the previous section, that
+ were obtianed using 4 random matches.
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+to get the projection matrices for the 4 cameras.
+\end_layout
+
+\begin_layout Standard
+Then, I took the 3D points triangulated from left0 and right0 and found
+ their reprojections to each camera, 
+\end_layout
+
+\begin_layout Standard
+and discarded the ones that were further then 2 pixels from the original
+ 2D points.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted7.png
+	scale 60
+
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Question 3.5
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted11.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted12.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+I now perfomed RANSAC and found a transformation 
+\begin_inset Formula $T$
+\end_inset
+
+ from frame1 coordinate system to frame0 coordinate system.
+ 
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+In this image I have the 3D points traingulated using the inliers of this
+ frames 0 and 1 stereo pairs.
+\end_layout
+
+\begin_layout Standard
+The coordinate system is the one of frame1 and so the transformation 
+\begin_inset Formula $T$
+\end_inset
+
+ was needed to perform on the points from frame 0 
+\end_layout
+
+\begin_layout Standard
+in order to allign the 2 point clouds.
+ (the transformation was applied to frame 0 frames because the car has moved
+ by T, 
+\end_layout
+
+\begin_layout Standard
+and so we needed to move the points by 
+\begin_inset Formula $T$
+\end_inset
+
+as well) 
+\end_layout
+
+\begin_layout Standard
+I also added the Left and Right cameras of frame 1 in (0,0,0).
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted8.png
+	scale 70
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We can see that the allignment is not perfect, which means there is some
+ error in 
+\begin_inset Formula $T$
+\end_inset
+
+, or in the triangulations or both.
+ 
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted13.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Here are the left0 and left1 images outliers (cyan) and inliers (orenge)
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted9.png
+
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted14.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+I manged to use Python multiprocessing, and used the university cluster
+ for multiple cpus.
+ 
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+so it took around 150 seconds for the intier movie.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+Another observations: the number of RANSAC iterations needed on avarage
+ was 19.9, for a probability of success of 0.99999.
+\end_layout
+
+\begin_layout Itemize
+I used an active apdate of the estimated number of RANSAC iteration needed,
+ by updating the number of outliers ratio in every iteration.
+\end_layout
+
+\begin_layout Itemize
+In red: the ground truth left camera centres
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+In blue: my estimations 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename pasted10.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+It's clear that there is some accumulating error, mainly when the vehicle
+ turns and there are probably less correspondents from frame to frame.
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+\begin_inset Newpage pagebreak
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Question 3.7
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $x\sim N\left(\mu_{x},\varSigma_{x}\right)$
+\end_inset
+
+ and 
+\begin_inset Formula $y=Ax$
+\end_inset
+
+ for a nonsingular (invertible) matrix 
+\begin_inset Formula $A$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+(.) Prove that the mean and covariance of 
+\begin_inset Formula $y$
+\end_inset
+
+ are 
+\begin_inset Formula $\mu_{y}=A\mu_{x}+b$
+\end_inset
+
+ and 
+\begin_inset Formula $\varSigma_{y}=A\varSigma_{x}A^{T}$
+\end_inset
+
+:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $E\left[y\right]=E\left[Ax+b\right]=AE\left[x\right]+E\left[b\right]=A\mu_{x}+b$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\varSigma_{y}=E\left[\left(y-\mu_{y}\right)\left(y-\mu_{y}\right)^{T}\right]=E\left[\left(\left(Ax+b\right)-\left(A\mu_{x}+b\right)\right)\left(\left(Ax+b\right)-\left(A\mu_{x}+b\right)\right)^{T}\right]$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $E\left[\left(Ax-A\mu_{x}\right)\left(Ax-A\mu_{x}\right)^{T}\right]=E\left[A\left(x-\mu_{x}\right)\left(x-\mu_{x}\right)^{T}A^{T}\right]=AE\left[\left(x-\mu_{x}\right)\left(x-\mu_{x}\right)^{T}\right]A^{T}=A\varSigma_{x}A^{T}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+(.) Prove that 
+\begin_inset Formula $y$
+\end_inset
+
+ is normally distributed 
+\begin_inset Formula $y\sim N(\mu_{y},\Sigma_{y})$
+\end_inset
+
+ using the random vector transformation: 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\textbf{Define the transformation and its inverse:}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $\ensuremath{y=g(x)=Ax+b}.$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To find 
+\begin_inset Formula $x$
+\end_inset
+
+ in terms of 
+\begin_inset Formula $y$
+\end_inset
+
+:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $x=g^{-1}(y)=A^{-1}(y-b)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\textbf{Find the Jacobian determinant:}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $J=\frac{\partial g(x)}{\partial x}=A$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Since 
+\begin_inset Formula $\ensuremath{A}$
+\end_inset
+
+ is a constant matrix, the determinant of the Jacobian is simply 
+\begin_inset Formula $\ensuremath{|A|}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $f_{y}(y)=f_{x}(g^{-1}(y))\left|\frac{\partial g^{-1}(y)}{\partial y}\right|$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Since 
+\begin_inset Formula $\ensuremath{g^{-1}(y)=A^{-1}(y-b)}$
+\end_inset
+
+, the Jacobian of 
+\begin_inset Formula $\ensuremath{g^{-1}(y)=A^{-1}(y-b)}$
+\end_inset
+
+ with respect to 
+\begin_inset Formula $y$
+\end_inset
+
+ is 
+\begin_inset Formula $\ensuremath{A^{-1}}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+Therefore, the determinant of the Jacobian is 
+\begin_inset Formula $\ensuremath{|A^{-1}|}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\textbf{Calculate the pdf:}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $Given\ \ensuremath{x\sim N(\mu_{x},\Sigma_{x})},the\ pdf\ of\ \ensuremath{x}\ is:$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $f_{x}(x)=\frac{1}{\sqrt{(2\pi)^{n}|\Sigma_{x}|}}\exp\left(-\frac{1}{2}(x-\mu_{x})^{T}\Sigma_{x}^{-1}(x-\mu_{x})\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $Substitute\ \ensuremath{x=A^{-1}(y-b)}:$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $f_{x}(A^{-1}(y-b))=\frac{1}{\sqrt{(2\pi)^{n}|\Sigma_{x}|}}\exp\left(-\frac{1}{2}(A^{-1}(y-b)-\mu_{x})^{T}\Sigma_{x}^{-1}(A^{-1}(y-b)-\mu_{x})\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $The\ determinant\ of\ the\ Jacobian\ \ensuremath{|A^{-1}|=\frac{1}{|A|}}:$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $f_{y}(y)=f_{x}(A^{-1}(y-b))\left|\frac{1}{|A|}\right|$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $Simplifying:$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $f_{y}(y)=\frac{1}{|A|}\frac{1}{\sqrt{(2\pi)^{n}|\Sigma_{x}|}}\exp\left(-\frac{1}{2}(A^{-1}(y-b)-\mu_{x})^{T}\Sigma_{x}^{-1}(A^{-1}(y-b)-\mu_{x})\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\textbf{Mahalanobis norm property:}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The Mahalanobis norm property states:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\|Mu\|_{\Sigma}^{2}=\|u\|_{M^{T}\Sigma M}^{2}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $Apply\ this\ to\ our\ context\ where\ \ensuremath{M=A^{-1}\ }and\ \ensuremath{u=y-b}:$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\|A^{-1}(y-b)-\mu_{x}\|_{\Sigma_{x}}^{2}=(A^{-1}(y-b)-\mu_{x})^{T}\Sigma_{x}^{-1}(A^{-1}(y-b)-\mu_{x})$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $Therefore,\ we\ can\ rewrite\ \ensuremath{f_{y}(y)}\ as:$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $f_{y}(y)=\frac{1}{\sqrt{(2\pi)^{n}|A\Sigma_{x}A^{T}|}}\exp\left(-\frac{1}{2}(y-(A\mu_{x}+b))^{T}(A\Sigma_{x}A^{T})^{-1}(y-(A\mu_{x}+b))\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\textbf{Conclusion:}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This shows that 
+\begin_inset Formula $\ensuremath{y}$
+\end_inset
+
+ follows a multivariate normal distribution with mean 
+\begin_inset Formula $\ensuremath{A\mu_{x}+b}$
+\end_inset
+
+ and covariance matrix 
+\begin_inset Formula $\ensuremath{A\Sigma_{x}A^{T}}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $Therefore,\ensuremath{\ y\sim N(A\mu_{x}+b,A\Sigma_{x}A^{T})}.$
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
