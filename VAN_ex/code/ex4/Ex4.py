@@ -24,7 +24,10 @@ SAVE_NAME = "tracking_db"
 
 
 # Initialize ImageProcessor
-def initialize_image_processor(feature_extractor_name=AKAZE, y_dist_threshold=1, accuracy=1, min_ransac_iterations=5):
+def initialize_image_processor(feature_extractor_name=AKAZE,
+                               y_dist_threshold=1,
+                               accuracy=1.5,
+                               min_ransac_iterations=5):
     return ImageProcessor(feature_extractor_name=feature_extractor_name, y_dist_threshold=y_dist_threshold,
                           accuracy=accuracy, min_ransac_iterations=min_ransac_iterations)
 
@@ -47,7 +50,7 @@ def create_matches_list(descriptors_frame_current, descriptors_frame_prev):
     return matches
 
 
-def fill_tracking_db2():
+def fill_tracking_db():
     directory_path = os.path.join(utils.DATA_PATH, "image_0")
     num_frames = sum(os.path.isfile(os.path.join(directory_path, f)) for f in os.listdir(directory_path))
     # num_frames = 100  # Set the number of frames you want to process
@@ -569,7 +572,7 @@ def Q47(tracking_db):
 
 
 if __name__ == '__main__':
-    # fill_tracking_db2()
+    fill_tracking_db()
     tracking_db = TrackingDB()
     tracking_db.load(SAVE_NAME)
     Q42(tracking_db)
