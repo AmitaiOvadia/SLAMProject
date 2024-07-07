@@ -126,7 +126,12 @@ def match_pair(image_pair_ind):
 
 def match_2_images(image1, image2, feature_extractor_name='AKAZE'):
     if feature_extractor_name == AKAZE:
-        feature_extractor = cv2.AKAZE.create()
+        feature_extractor = cv2.AKAZE_create(
+                            threshold=1e-6,         # Lower threshold for more sensitivity
+                            # nOctaves=8,             # Increase the number of octaves (default is 4)
+                            # nOctaveLayers=8,        # Increase the number of layers within each octave (default is 4)
+                            # diffusivity=cv2.KAZE_DIFF_PM_G2  # Robust diffusivity choice
+                        )
     elif feature_extractor_name == SIFT:
         feature_extractor = cv2.SIFT.create()
     elif feature_extractor_name == ORB:
@@ -134,7 +139,8 @@ def match_2_images(image1, image2, feature_extractor_name='AKAZE'):
     elif feature_extractor_name == BRISK:
         feature_extractor = cv2.BRISK_create()
     key_points_1, descriptors_1, key_points_2, descriptors_2 = detect_features(image1, image2,
-                                                                               feature_extractor=feature_extractor)
+                                                                               feature_extractor=feature_extractor,
+                                                                               blur=True)
     matches = find_closest_features(descriptors_1, descriptors_2)
     return key_points_1, key_points_2, descriptors_1, descriptors_2, matches
 
