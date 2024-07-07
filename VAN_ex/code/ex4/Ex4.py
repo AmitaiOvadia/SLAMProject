@@ -565,7 +565,6 @@ def Q46(tracking_db):
 
 def Q47(tracking_db):
     min_length = 50
-    frame_ind_for_3D = 0
     check_reprojections_along_track(tracking_db=tracking_db,
                                     min_length=min_length)
 
