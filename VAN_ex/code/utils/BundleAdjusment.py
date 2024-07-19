@@ -215,7 +215,7 @@ class BundleAdjusment:
         self.all_camera_centers = None
         self._tracking_db = tracking_db
         self.total_num_frames = len(self._tracking_db.frameId_to_trackIds_list)
-        self.key_frames = self.choose_key_frames_by_median_track_len()
+        self.key_frames = self.choose_key_frames_by_track_length()
         if calculate_only_first_bundle:
             self.key_frames = self.key_frames[:2]
         # self.key_frames = self.key_frames[:4]
@@ -324,25 +324,6 @@ class BundleAdjusment:
             bundelon = Bundelon(tracking_db=self._tracking_db, frames=bundelon_frames)
             bundelon.create_bundelon_factor_graph()
             bundelon.optimize_bundelon()
-
-            # camera = gtsam.symbol("c", 12)
-            # optimized_values = bundelon.get_optimized_values_gtsam_format()
-            # camera_pose = optimized_values.atPose3(camera)
-            # print(f"camera pose:\n{camera_pose}")
-            # graph = bundelon._graph
-            # for i in range(graph.size()):
-            #     factor = graph.at(i)
-            #     # Check if the factor involves the 'camera'
-            #     if camera in factor.keys():
-            #         # Print or store the factor associated with the camera
-            #         print(factor)
-            #         print(f"factor error is: {factor.error(optimized_values):.4g}")
-            #         # If you only need the first associated factor, you can break here
-            #         break
-            # frames = bundelon._bundelon_absolute_frames
-            # poses = [optimized_values.atPose3(gtsam.symbol("c", fr)) for fr in frames]
-            # all_cameras = [Bundelon.get_Rt_from_gtsam_Pose3(pose) for pose in poses]
-
             all_camera_poses, all_camera_poses_gtsam = bundelon.get_all_optimized_camera_poses()
             all_landmarks = bundelon.get_optimized_landmarks_3d()
             self.key_frames_to_bundelons[window_start_frame] = bundelon
@@ -372,7 +353,7 @@ class BundleAdjusment:
             key_frames = np.append(key_frames, all_frames[-1])
         return key_frames
 
-    def choose_key_frames_by_median_track_len(self):
+    def choose_key_frames_by_track_length(self):
         """
         Choose keyframes by the median track len's from the last frame
         """
