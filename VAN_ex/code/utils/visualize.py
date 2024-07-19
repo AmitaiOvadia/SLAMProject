@@ -309,7 +309,7 @@ class Visualizer:
         plt.scatter(ground_truth_centers[:, 0], ground_truth_centers[:, 1], color=ground_truth_colors,
                     label='Ground Truth Centers', s=s)
 
-        save_name = 'Camera Centers vs Ground 2D.png'
+        save_name = 'Camera Centers vs Ground 2D_100_split.png'
         plt.xlabel('X')
         plt.ylabel('Z')
         plt.title('Camera Centers vs Ground Truth Centers')

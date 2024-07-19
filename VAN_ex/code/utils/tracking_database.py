@@ -3,6 +3,7 @@ import cv2
 import pickle
 from typing import List, Tuple, Dict, Sequence, Optional
 from timeit import default_timer as timer
+import random
 
 NO_ID = -1
 
@@ -86,7 +87,7 @@ class TrackingDB:
     prev_frame_links: List[Link]
     leftover_links: Dict[int, List[Link]]
 
-    def __init__(self):
+    def __init__(self, K, M1, M2):
         self.inlers_per_frame = None
         self.last_frameId = -1  # assumptions: frameIds are consecutive from 0 (1st frame) to last_frameId
         self.last_trackId = -1
@@ -101,7 +102,12 @@ class TrackingDB:
         self.prev_frame_links = None
         # map frameId --> link list, all the links of features that were not matched
         # ordered according to the order in the descriptors array
-
+        self.K = K
+        self.M1 = M1
+        self.M2 = M2
+        self.frameId_to_relative_extrinsic_Rt = {0: self.M1}
+        self.frameId_to_absolute_extrinsic_Rt = {0: self.M1}
+        self.frameId_to_camera_center = {0: TrackingDB.get_camera_center_from_Rt(self.M1)}
         self.frameId_to_num_keypoints = {}
         self.frameId_to_num_inliers = {}
         self.leftover_links = {}
@@ -177,6 +183,8 @@ class TrackingDB:
 
     def get_features_left(self, frameId) -> Optional[np.ndarray]:
         return self.frameId_to_lfeature.get(frameId, None)
+
+    """ The feature array of (the right image of) frameId """
 
     def get_features_right(self, frameId) -> Optional[np.ndarray]:
         return self.frameId_to_rfeature.get(frameId, None)
@@ -322,16 +330,27 @@ class TrackingDB:
                   links: List[Link],
                   left_features: np.ndarray,
                   right_features: np.ndarray,
+                  left_extrinsic_cam: np.ndarray = None,
                   matches_to_previous_left: Tuple[cv2.DMatch] = None,
                   total_num_keypoints: int = None,
                   num_inliers: int =None,
-                  inliers: List[bool] = None) -> int:
+                  inliers: List[bool] = None,
+                  ) -> int:
         feat_num = left_features.shape[0]
         assert feat_num == len(links)
 
         prev_frameId = self.last_frameId
         cur_frameId = self.issue_frameId()
-
+        if left_extrinsic_cam is None and cur_frameId != 0:
+            assert "if frameId not zero you must supply a left camera matrix"
+        if cur_frameId != 0:
+            self.frameId_to_relative_extrinsic_Rt[cur_frameId] = left_extrinsic_cam
+            T_absolute_cur = TrackingDB.get_T(self.frameId_to_absolute_extrinsic_Rt[prev_frameId])
+            T_relative = TrackingDB.get_T(self.frameId_to_relative_extrinsic_Rt[cur_frameId])
+            T_absolute_cur = T_relative @ T_absolute_cur
+            Rt_cur = TrackingDB.get_Rt_from_T(T_absolute_cur)
+            self.frameId_to_absolute_extrinsic_Rt[cur_frameId] = Rt_cur
+            self.frameId_to_camera_center[cur_frameId] = TrackingDB.get_camera_center_from_Rt(Rt_cur)
         self.add_num_inliers(num_inliers, cur_frameId)
         self.add_num_keypoints(total_num_keypoints, cur_frameId)
 
@@ -401,6 +420,9 @@ class TrackingDB:
             'last_trackId': self.last_trackId,
             'trackId_to_frames': self.trackId_to_frames,
             'linkId_to_link': self.linkId_to_link,
+            'frameId_to_absolute_extrinsic_Rt': self.frameId_to_absolute_extrinsic_Rt,
+            'frameId_to_relative_extrinsic_Rt': self.frameId_to_relative_extrinsic_Rt,
+            'frameId_to_camera_center': self.frameId_to_camera_center,
             'frameId_to_lfeature': self.frameId_to_lfeature,
             'frameId_to_trackIds_list': self.frameId_to_trackIds_list,
             'prev_frame_links': self.prev_frame_links,
@@ -423,6 +445,9 @@ class TrackingDB:
             self.last_trackId = data['last_trackId']
             self.trackId_to_frames = data['trackId_to_frames']
             self.linkId_to_link = data['linkId_to_link']
+            self.frameId_to_absolute_extrinsic_Rt = data['frameId_to_absolute_extrinsic_Rt']
+            self.frameId_to_relative_extrinsic_Rt = data['frameId_to_relative_extrinsic_Rt']
+            self.frameId_to_camera_center = data['frameId_to_camera_center'],
             self.frameId_to_lfeature = data['frameId_to_lfeature']
             self.frameId_to_trackIds_list = data['frameId_to_trackIds_list']
             self.prev_frame_links = data['prev_frame_links']
@@ -529,6 +554,40 @@ class TrackingDB:
 
         print('Elapsed time: {0:.2f} secs.'.format(timer() - start))
         print('All Good')
+
+    @staticmethod
+    def get_T(R_t):
+        T = np.vstack((R_t, [0, 0, 0, 1]))
+        return T
+
+    @staticmethod
+    def get_Rt_from_T(T):
+        Rt = T[:-1]
+        return Rt
+
+    @staticmethod
+    def extract_R_t(extrinsic_matrix):
+        R = extrinsic_matrix[:3, :3]
+        t = extrinsic_matrix[:3, 3]
+        return R, t
+
+    @staticmethod
+    def get_camera_center_from_Rt(Rt):
+        R, t = TrackingDB.extract_R_t(Rt)
+        center = -R.T @ t
+        return center
+
+    def find_random_track(self, min_length=10, max_length=None, shuffle=False):
+        track_ids = self.all_tracks()
+        max_length = -1 if max_length is None else max_length
+        if shuffle:
+            random.shuffle(track_ids)  # Shuffle the list to randomize the selection
+        for trackId in track_ids:
+            if len(self.frames(trackId)) >= min_length:
+                frames = self.frames(trackId)[:max_length]
+                links = [self.link(frameId, trackId) for frameId in frames]
+                return trackId, frames, links
+        return None  # Return None if no such track is found
 
     def present_tracking_statistics(self):
         non_trivial_tracks = [trackId for trackId in self.all_tracks() if len(self.frames(trackId)) > 1]

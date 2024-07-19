@@ -15,6 +15,7 @@ SIFT = 'SIFT'
 ORB = 'ORB'
 BRISK = 'BRISK'
 
+
 def read_images(idx):
     """
     Reads a pair of images from the dataset.
@@ -126,12 +127,7 @@ def match_pair(image_pair_ind):
 
 def match_2_images(image1, image2, feature_extractor_name='AKAZE'):
     if feature_extractor_name == AKAZE:
-        feature_extractor = cv2.AKAZE_create(
-                            threshold=1e-6,         # Lower threshold for more sensitivity
-                            # nOctaves=8,             # Increase the number of octaves (default is 4)
-                            # nOctaveLayers=8,        # Increase the number of layers within each octave (default is 4)
-                            # diffusivity=cv2.KAZE_DIFF_PM_G2  # Robust diffusivity choice
-                        )
+        feature_extractor = cv2.AKAZE_create(threshold=1e-4)  # Lower threshold for more sensitivity
     elif feature_extractor_name == SIFT:
         feature_extractor = cv2.SIFT.create()
     elif feature_extractor_name == ORB:
