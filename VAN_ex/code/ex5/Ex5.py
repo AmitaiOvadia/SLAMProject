@@ -140,13 +140,11 @@ def display_factor_erros(factor_errors, track_id):
     plt.savefig(f"reprojection errors along track.png")
 
 
-
-
-def display_3d_trajectory_gtsam_function(initial_estimates, optimized_values):
+def display_3d_trajectory_gtsam_function(graph, initial_estimates, optimized_values):
     # display the trajectories using gtsam fucntion
     plt.figure()
-    gtsam.utils.plot.plot_trajectory(fignum=0, values=optimized_values)
-    gtsam.utils.plot.plot_trajectory(fignum=0, values=initial_estimates)
+    marginals_results = gtsam.Marginals(graph, optimized_values)
+    gtsam.utils.plot.plot_trajectory(fignum=0, marginals=marginals_results, values=optimized_values)
     # Get the current axis
     ax = plt.gca()
     # Flip the y-axis
@@ -159,7 +157,7 @@ def display_3d_trajectory_gtsam_function(initial_estimates, optimized_values):
     ax.set_box_aspect([1, 1, 1])  # Aspect ratio is 1:1:1
     ax.view_init(elev=30, azim=90)  # Adjust the elevation and azimuth to get the desired view
     # Save the figure
-    plt.savefig("gtsam_3D_trajectory_for_first_bundle_window.png")
+    plt.savefig("gtsam_3D_trajectory_for_first_bundle_window.png", dpi=600)
 
 
 def display_initial_vs_optimized_measured_and_reprojected_worse_factor(left_image, q_measured, q_projection_final,
@@ -404,7 +402,8 @@ def task_5_3(tracking_db):
                                                                        q_projection_initial, reprojection_error_final,
                                                                        reprojection_error_initial, right_image)
 
-    display_3d_trajectory_gtsam_function(initial_estimates, optimized_values)
+    graph = first_bundelon.get_factor_graph()
+    display_3d_trajectory_gtsam_function(graph, initial_estimates, optimized_values)
 
     # do bundle with first window only
     bundle_object = BundleAdjusment(tracking_db, calculate_only_first_bundle=True)
@@ -475,7 +474,7 @@ def display_localization_erros_vs_ground_truth(bundle_object, processor, use_key
     plt.legend()
     # Show the plot
     plt.savefig(f"keyframe localization error in meters over time.png")
-    plt.show()
+    # plt.show()
     a=0
 
 
