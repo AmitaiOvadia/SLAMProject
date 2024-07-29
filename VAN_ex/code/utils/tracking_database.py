@@ -29,6 +29,13 @@ class Link:
     def __str__(self):
         return f'Link (xl={self.x_left}, xr={self.x_right}, y={self.y})'
 
+    @staticmethod
+    def create_links_from_points(points_left, points_right):
+        num_points  = len(points_left)
+        links = [Link(points_left[i, 0], points_right[i, 0],
+                        (points_left[i, 1] + points_right[i, 1]) / 2) for i in range(num_points)]
+        return links
+
 
 """
 for internal use of TrackingDB.

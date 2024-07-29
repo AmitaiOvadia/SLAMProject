@@ -7,9 +7,9 @@ import os
 
 NUMBER_OF_FEATURES = 128
 IMAGE_HEIGHT = 376
-RATIO = 0.4
 DATA_PATH = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'VAN_ex', 'dataset', 'sequences', '00')
-
+AKAZE_THRESH = 1e-4
+DO_BLUR = True
 AKAZE = 'AKAZE'
 SIFT = 'SIFT'
 ORB = 'ORB'
@@ -76,7 +76,7 @@ def detect_features(image1, image2, feature_extractor=cv2.AKAZE_create(), blur=F
     tuple: Keypoints and descriptors for both images.
     """
     if blur:
-        sigma = 2.0
+        sigma = 1.0
         kernel_size = (int(6 * sigma + 1) | 1, int(6 * sigma + 1) | 1)  # Ensure the kernel size is odd
         image1 = cv2.GaussianBlur(image1, kernel_size, sigma)
         image2 = cv2.GaussianBlur(image2, kernel_size, sigma)
@@ -127,7 +127,7 @@ def match_pair(image_pair_ind):
 
 def match_2_images(image1, image2, feature_extractor_name='AKAZE'):
     if feature_extractor_name == AKAZE:
-        feature_extractor = cv2.AKAZE_create(threshold=1e-4)  # Lower threshold for more sensitivity
+        feature_extractor = cv2.AKAZE_create(threshold=AKAZE_THRESH)  # Lower threshold for more sensitivity
     elif feature_extractor_name == SIFT:
         feature_extractor = cv2.SIFT.create()
     elif feature_extractor_name == ORB:
@@ -136,7 +136,7 @@ def match_2_images(image1, image2, feature_extractor_name='AKAZE'):
         feature_extractor = cv2.BRISK_create()
     key_points_1, descriptors_1, key_points_2, descriptors_2 = detect_features(image1, image2,
                                                                                feature_extractor=feature_extractor,
-                                                                               blur=True)
+                                                                               blur=DO_BLUR)
     matches = find_closest_features(descriptors_1, descriptors_2)
     return key_points_1, key_points_2, descriptors_1, descriptors_2, matches
 
@@ -171,7 +171,7 @@ def triangulate_points_per_pair(Pa, Pb, points_a, points_b):
     return Xs
 
 
-def triangulate_points(Pa, Pb, points_a, points_b):
+def triangulate_points_without_opencv(Pa, Pb, points_a, points_b):
     N = points_a.shape[0]
     A = np.zeros((N, 4, 4))
     p1a, p2a, p3a = Pa[0, :], Pa[1, :], Pa[2, :]
@@ -200,7 +200,7 @@ def get_camera_center_from_Rt(Rt):
     return center
 
 
-def triangulate_using_opencv(Pa, Pb, points_a, points_b):
+def triangulate_points(Pa, Pb, points_a, points_b):
     x_3d_opencv = cv2.triangulatePoints(Pa, Pb, points_a.T, points_b.T).T
     x_3d_opencv = x_3d_opencv[:, :-1] / x_3d_opencv[:, -1:]
     return x_3d_opencv
