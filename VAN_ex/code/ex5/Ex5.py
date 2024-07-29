@@ -12,10 +12,11 @@ from utils.BundleAdjusment import BundleAdjusment, Bundelon
 from ex3.Ex3 import ImageProcessor
 from utils import utils
 import cv2
-TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc'
+# TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc'
+TRACKING_DB_PATH = '../ex4/tracking_db_2_acc_y_2_5e-4_blur_0_it_5_akaze_good'
 DATA_PATH = r"/cs/labs/tsevi/amitaiovadia/SLAMProject/VAN_ex/dataset/sequences/00"
 import matplotlib
-matplotlib.use('TKAgg')
+# matplotlib.use('TKAgg')
 
 
 def get_factors_errors(factors, values):
@@ -140,7 +141,7 @@ def display_factor_erros(factor_errors, track_id):
     plt.savefig(f"reprojection errors along track.png")
 
 
-def display_3d_trajectory_gtsam_function(graph, initial_estimates, optimized_values):
+def display_3d_trajectory_gtsam_function(graph, optimized_values):
     # display the trajectories using gtsam fucntion
     plt.figure()
     marginals_results = gtsam.Marginals(graph, optimized_values)
@@ -403,7 +404,7 @@ def task_5_3(tracking_db):
                                                                        reprojection_error_initial, right_image)
 
     graph = first_bundelon.get_factor_graph()
-    display_3d_trajectory_gtsam_function(graph, initial_estimates, optimized_values)
+    display_3d_trajectory_gtsam_function(graph, optimized_values)
 
     # do bundle with first window only
     bundle_object = BundleAdjusment(tracking_db, calculate_only_first_bundle=True)
