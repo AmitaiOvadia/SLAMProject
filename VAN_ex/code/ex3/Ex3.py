@@ -15,6 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils import utils
 from utils.visualize import Visualizer
 from ex2.Ex2 import *
+MAX_RANSAC_ITERATIONS = 1000
 
 AKAZE = 'AKAZE'
 SIFT = 'SIFT'
@@ -70,10 +71,7 @@ class ImageProcessor:
         return np.hstack((rot, tvec))
 
     def get_R_t_using_pnp(self, points_3D_world, points_2d_image, K, flag):
-        try:
-            success, rotation_vector, translation_vector = cv2.solvePnP(points_3D_world, points_2d_image, K, None, flags=flag)
-        except cv2.error:
-            pass
+        success, rotation_vector, translation_vector = cv2.solvePnP(points_3D_world, points_2d_image, K, None, flags=flag)
         if not success:
             return self.PNP_FAILED
         R_t = self.rodriguez_to_mat(rotation_vector, translation_vector)
@@ -108,23 +106,26 @@ class ImageProcessor:
         points = points[:, :-1] / points[:, -1][:, np.newaxis]
         return points
 
-    def reproject(self, P, points_3D):
-        points_3D_hom = self.to_homogeneous(points_3D)
+    @staticmethod
+    def reproject(P, points_3D):
+        points_3D_hom = ImageProcessor.to_homogeneous(points_3D)
         points_2D_hom = (P @ points_3D_hom.T).T
-        reprojected_points = self.from_homogeneous(points_2D_hom)
+        reprojected_points = ImageProcessor.from_homogeneous(points_2D_hom)
         return reprojected_points
 
     def check_reprojections(self, left0_2D, right0_2D, left1_2D, right1_2D,
-                            left0_P, right0_P, left1_P, right1_P, points_3D_world):
+                            left0_P, right0_P, left1_P, right1_P, points_3D_world, accuracy=None):
         all_2D_points = [left0_2D, right0_2D, left1_2D, right1_2D]
         all_ps = [left0_P, right0_P, left1_P, right1_P]
         inliers = []
         reprojections = []
+        if accuracy is None:
+            accuracy = self.accuracy
         for points_2D, P in zip(all_2D_points, all_ps):
             reprojected_points = self.reproject(P, points_3D_world)
             reprojections.append(reprojected_points)
             reprojection_errors = np.linalg.norm(reprojected_points - points_2D, axis=-1)
-            are_inliers = reprojection_errors < self.accuracy
+            are_inliers = reprojection_errors < accuracy
             inliers.append(are_inliers)
         inliers = np.array(inliers).T
         inliers = np.all(inliers, axis=1)
@@ -134,10 +135,12 @@ class ImageProcessor:
     @staticmethod
     def estimate_number_of_ransac_iterations(probability_for_success, outliers_ratio, number_of_model_params=4):
         num_iterations = np.ceil(np.log(1 - probability_for_success) / np.log(1 - np.power(1 - outliers_ratio, number_of_model_params)))
+        num_iterations = min(num_iterations, MAX_RANSAC_ITERATIONS)
         return num_iterations
 
-    def run_RANSAC(self, world_3D_points, left0_2D_points, right0_2D_points, left1_2D_points, right1_2D_points, K, M_L0, M_R0):
-        probability_for_success = 0.99999  # probability for successes
+    def run_RANSAC(self, world_3D_points, left0_2D_points, right0_2D_points, left1_2D_points,
+                   right1_2D_points, K, M_L0, M_R0, accuracy=None):
+        probability_for_success = 0.999  # probability for successes
         outliers_ratio = 0.99  # outliers ratio, later updated
         num_iterations_needed = self.estimate_number_of_ransac_iterations(probability_for_success=probability_for_success,
                                                                           outliers_ratio=outliers_ratio,
@@ -165,7 +168,8 @@ class ImageProcessor:
             left0_P = K @ M_L0
             right0_P = K @ M_R0
             inliers_inds, _ = self.check_reprojections(left0_2D_points, right0_2D_points, left1_2D_points, right1_2D_points,
-                                                       left0_P, right0_P, left1_P_est, right1_P_est, world_3D_points)
+                                                       left0_P, right0_P, left1_P_est, right1_P_est, world_3D_points,
+                                                       accuracy=accuracy)
             num_inliers = len(inliers_inds)
             if num_inliers == 0:
                 continue
@@ -219,8 +223,8 @@ class ImageProcessor:
                                 R_left_0, R_right_0, R_left_1, R_right_1, file_name="camera_pairs_plot.html")
 
     def find_shared_points_across_2_stereo_pairs(self, left_0, left_1, right_0, right_1):
-        left_descriptors_0, left_key_points_0, matches_dict_0, right_key_points_0 = self.get_matches(left_0, right_0)
-        left_descriptors_1, left_key_points_1, matches_dict_1, right_key_points_1 = self.get_matches(left_1, right_1)
+        left_descriptors_0, right_descriptors_0, left_key_points_0, matches_dict_0, right_key_points_0, matches_0 = self.get_matches(left_0, right_0)
+        left_descriptors_1, right_descriptors_1, left_key_points_1, matches_dict_1, right_key_points_1, matches_1 = self.get_matches(left_1, right_1)
         left_0_left_1_matches = utils.find_closest_features(left_descriptors_0, left_descriptors_1)
         matches_dict_left0_left1 = self.create_matches_dict(left_0_left_1_matches)
         left_0_inds, right_0_inds, left_1_inds, right_1_inds = self.get_points_in_4_images(matches_dict_left0_left1,
@@ -240,7 +244,7 @@ class ImageProcessor:
                                                                self.y_dist_threshold)
         good_matches = [match for match, is_good in zip(matches, good_matches_inds) if is_good]
         matches_dict = self.create_matches_dict(good_matches)
-        return left_descriptors, left_key_points, matches_dict, right_key_points
+        return left_descriptors, right_descriptors, left_key_points, matches_dict, right_key_points, good_matches
 
     def Q3(self):
         left_0, right_0 = utils.read_images(0)
