@@ -10,13 +10,16 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.tracking_database import TrackingDB, Link
 from utils import utils
 from utils.BundleAdjusment import BundleAdjusment, Bundelon
-MAHALANOBIS_THERSH = 500
+from utils.visualize import Visualizer
+MAHALANOBIS_THERSH = 750
+PNP_INLIERS_THRESHOLD = 50
 VISUALIZATION_CONSTANT = 1
 INITIAL_POSE_SIGMA = VISUALIZATION_CONSTANT * np.concatenate((np.deg2rad([1, 1, 1]), [0.1, 0.01, 1]))
 
 
 class PoseGraph:
     def __init__(self, bundle_object, processor, do_loop_closure=False):
+        self.loop_closure_pair_to_optimized_values = dict()
         self._is_optimized = False
         self._optimized_values = None
 
@@ -35,11 +38,85 @@ class PoseGraph:
         self.key_frames_to_relative_motion_covariance = self.bundle_object.key_frames_to_relative_motion_covariance
         self.key_frames_to_relative_camera_poses_gtsam = self.bundle_object.key_frames_to_relative_camera_poses_gtsam
         self.key_frames_to_absolute_camera_poses_gtsam = self.bundle_object.key_frames_to_absolute_camera_poses_gtsam
+        self.ground_truth_locations = np.array(self.get_ground_truth_locations())
         self._pose_graph = self.create_pose_graph()
         self.optimize()
         if self.do_loop_closure:
+            self.total_num_loop_closures = 0
+            self.loop_closure_frames_counter = 0
             self.create_initial_loop_closure_graph()
+            self.initial_location_uncertainty_per_frame = self.get_location_uncertainties_for_entire_graph()
             self.optimize_pose_graph_with_loop_closures()
+            self.final_location_uncertainty_per_frame = self.get_location_uncertainties_for_entire_graph()
+
+    def get_ground_truth_locations(self):
+        true_Rt = self.processor.load_all_ground_truth_camera_matrices(self.processor.GROUND_TRUTH_PATH)
+        ground_truth_centers = [utils.get_camera_center_from_Rt(Rt) for Rt in true_Rt]
+        return ground_truth_centers
+
+    def get_location_uncertainties_for_entire_graph(self):
+        all_uncertainty_sizes = []
+        for key_frame in self.key_frames:
+            cov = self.marginals.marginalCovariance(gtsam.symbol("c", key_frame))  # get the covariance for each pose
+            location_cov = cov[3:, 3:]  # take the bottom left 3 by 3 matrix
+            volume = np.sqrt(np.linalg.det(location_cov))
+            uncertainty_size = volume
+            all_uncertainty_sizes.append(uncertainty_size)
+        return np.array(all_uncertainty_sizes)
+
+    def save_cur_camera_locations_status_vs_ground_truth(self):
+        cur_camera_centers = self.get_camera_centers_from_gtsam_graph()
+        all_pairs_as_keys = [self.loop_closure_pair_to_optimized_values[i][1] for i in
+                             range(len(self.loop_closure_pair_to_optimized_values))]
+        all_loop_closure_frames = []
+        for pairs in all_pairs_as_keys:
+            for i in range(len(pairs)):
+                all_loop_closure_frames.append(int(list(pairs)[i][0]))
+                all_loop_closure_frames.append(int(list(pairs)[i][1]))
+        all_loop_closure_frames = np.array(all_loop_closure_frames)
+        loop_closure_keyframes_indices = np.where(np.isin(self.key_frames, all_loop_closure_frames))[0]
+        margin = 40
+
+        # Calculate limits
+        xmin = self.ground_truth_locations[:, 0].min() - margin
+        xmax = self.ground_truth_locations[:, 0].max() + margin
+        zmin = self.ground_truth_locations[:, 2].min() - margin
+        zmax = self.ground_truth_locations[:, 2].max() + margin
+
+        fig, ax = plt.subplots()
+
+        cur_camera_centers_2D = cur_camera_centers[:, [0, 2]]
+        ground_truth_2D = self.ground_truth_locations[:, [0, 2]]
+
+        # Scatter plots
+        ax.scatter(cur_camera_centers_2D[:, 0], cur_camera_centers_2D[:, 1], s=1, color='blue',
+                   label='estimated key-frames centers')
+        ax.scatter(ground_truth_2D[:, 0], ground_truth_2D[:, 1], s=1, color='red', label='ground truth')
+
+        # Highlight loop closure frames
+        loop_closure_2D = cur_camera_centers[loop_closure_keyframes_indices][:, [0, 2]]
+        ax.scatter(loop_closure_2D[:, 0], loop_closure_2D[:, 1], s=10, color='green', label='loop closure frames')
+
+        # Set axis limits
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([zmin, zmax])
+
+        # Add grid
+        ax.grid(True)
+
+        # Save the plot in high resolution
+        plt.legend()
+        plt.savefig(f'all_loop_closure_stages/stage_{self.loop_closure_frames_counter}.png', dpi=600)
+
+
+    def get_camera_centers_from_gtsam_graph(self):
+            camera_centers = []
+            for key_frame in self.key_frames:
+                optimized_pose = self._optimized_values.atPose3(gtsam.symbol('c', key_frame))
+                camera_center = optimized_pose.translation()  # gtsam coordinates: t is is camera lovarin
+                camera_centers.append(camera_center)
+            camera_centers = np.array(camera_centers)
+            return camera_centers
 
     def optimize_pose_graph_with_loop_closures(self,
                                                look_back_frames=20,
@@ -69,7 +146,8 @@ class PoseGraph:
                 add the new edge to the loop closure graph
                 update all the edges as the relative covariance weight between each of them
         """
-
+        self.save_cur_camera_locations_status_vs_ground_truth()
+        self.loop_closure_pair_to_optimized_values = {0: (self._optimized_values, dict(), self.get_marginals(), self.get_camera_centers_from_gtsam_graph())}
         for pose_ind in range(look_back_frames, len(self.key_frames)):
             cur_key_frame = int(self.key_frames[pose_ind])
             cur_pose_vector = self.get_key_frame_pose_vector(cur_key_frame)
@@ -86,44 +164,34 @@ class PoseGraph:
                                                                  v2=cur_pose_vector,
                                                                  cov=cov_approximation)
                 if mahalanobis_distance < MAHALANOBIS_THERSH:
-                    print(f"from {prev_key_frame} to {cur_key_frame} path length is {len(shortest_path)}" )
+                    # print(f"from {prev_key_frame} to {cur_key_frame} path length is {len(shortest_path)}" )
                     loop_closer_candidates.append((prev_key_frame, mahalanobis_distance))
             if len(loop_closer_candidates) > 0:
                 loop_closer_candidates = np.array(loop_closer_candidates)
                 loop_closer_candidates = loop_closer_candidates[loop_closer_candidates[:, 1].argsort()][:5]
                 # print(f"for frame {cur_key_frame} the cancicates were: {loop_closer_candidates}")
-                loop_closer_info = {}
+                loop_closure_info = {}
                 for closure_candidate, dist in loop_closer_candidates:
                     try:
                         pose_covariance, optimized_pose, original_pose = self.get_bundel_pose_and_covariance(
-                            closure_candidate, cur_key_frame)
+                                                                               closure_candidate, cur_key_frame)
                         # add a pose to the pose graph
-                        loop_closer_info[(cur_key_frame, closure_candidate)] = [optimized_pose, pose_covariance]
+                        loop_closure_info[(cur_key_frame, closure_candidate)] = [optimized_pose, pose_covariance]
                     except:
-                        print("pnp failed")
+                        # print("pnp failed")
                         continue
-                if len(loop_closer_info) > 0:
-                    print(f"added {loop_closer_info.keys()}")
-                    self.update_gtsam_pose_graph(loop_closer_info)
-                    self.add_edges_to_loop_closure_graph(loop_closer_info)
+                if len(loop_closure_info) > 0:
+                    print(f"added {loop_closure_info.keys()}")
+                    self.update_gtsam_pose_graph(loop_closure_info)
+                    self.add_edges_to_loop_closure_graph(loop_closure_info)
                     self.update_weights_and_cov_loop_closure_graph()
-                # update the  loop closure graph:
-                # add the new edge to the graph and update all the weights
+                    self.loop_closure_frames_counter += 1
+                    self.loop_closure_pair_to_optimized_values[self.loop_closure_frames_counter] = (self._optimized_values,
+                                                                                             loop_closure_info.keys(),
+                                                                                             self.get_marginals(),
+                                                                                             self.get_camera_centers_from_gtsam_graph())
+                    self.save_cur_camera_locations_status_vs_ground_truth()
 
-
-        plt.figure()
-        gtsam.utils.plot.plot_trajectory(1, self._initial_est, scale=1, title="Initial poses")
-        # plt.show()
-
-        # Plot optimized trajectory without covariance
-        gtsam.utils.plot.plot_trajectory(1, self._optimized_values, scale=1, title="Optimized poses")
-        ax = plt.gca()
-
-        # ax = plt.gca()
-        # ax.view_init(elev=0, azim=270)
-        ax.view_init(elev=0, azim=270)
-        plt.show()
-        a=0
 
     def add_edges_to_loop_closure_graph(self, loop_closer_info):
         # add edges
@@ -167,21 +235,20 @@ class PoseGraph:
         frames = np.array([cur_key_frame, closure_candidate])
         track_Id_to_frames = {i: np.array([cur_key_frame, closure_candidate]) for i in range(num_links)}
         frameId_to_left_camera_gtsam = {cur_key_frame: gtsam.Pose3(), closure_candidate: new_pose}
-        _, _, _, _, initial_est, graph = Bundelon.create_bundelon_factor_graph(frames,
+        _, _, _, _, initial_est, graph_2_poses = Bundelon.create_bundelon_factor_graph(frames,
                                                                                track_Id_to_frames,
                                                                                frameId_to_left_camera_gtsam,
                                                                                self.tracking_db.K,
                                                                                self.tracking_db.M2,
                                                                                linkId_to_link)
-        optimizer = gtsam.LevenbergMarquardtOptimizer(graph, initial_est)
+        optimizer = gtsam.LevenbergMarquardtOptimizer(graph_2_poses, initial_est)
         optimized_values = optimizer.optimize()
-        marginals = gtsam.Marginals(graph, optimized_values)
+        marginals = gtsam.Marginals(graph_2_poses, optimized_values)
         keys = gtsam.KeyVector()
         keys.append(gtsam.symbol('c', cur_key_frame))
         keys.append(gtsam.symbol('c', closure_candidate))
         joint_covariance = np.linalg.inv(
             marginals.jointMarginalInformation(keys).at(keys[-1], keys[-1]))
-        det = np.linalg.det(joint_covariance)
         optimized_pose = optimized_values.atPose3(gtsam.symbol('c', closure_candidate))
         original_pose = gtsam.Pose3(new_pose)
         return joint_covariance, optimized_pose, original_pose
@@ -202,13 +269,25 @@ class PoseGraph:
                                                                                            K=self.tracking_db.K,
                                                                                            M_L0=self.tracking_db.M1,
                                                                                            M_R0=self.tracking_db.M2)
-        print(len(pnp_inliers), flush=True)
-        if len(pnp_inliers) < 40:
-            raise ValueError("the number of inliers must be above 40")
+        # print(len(pnp_inliers), flush=True)
+        if len(pnp_inliers) < PNP_INLIERS_THRESHOLD:
+            raise ValueError(F"the number of inliers must be above PNP_INLIERS_THRESHOLD = {PNP_INLIERS_THRESHOLD}")
+
+        self.total_num_loop_closures += 1
+        all_indices = np.arange(len(points_3D_0))
+        pnp_outliers = np.setdiff1d(all_indices, pnp_inliers)
+        left_0_outliers_2D = left_0_points_2D[pnp_outliers]
+        left_1_outliers_2D = left_1_points_2D[pnp_outliers]
+
         left_0_points_2D, left_1_points_2D, right_0_points_2D, right_1_points_2D = (left_0_points_2D[pnp_inliers],
                                                                                     left_1_points_2D[pnp_inliers],
                                                                                     right_0_points_2D[pnp_inliers],
                                                                                     right_1_points_2D[pnp_inliers])
+        Visualizer.display_key_points_with_inliers_outliers(left_0, left_1, left_0_points_2D, left_1_points_2D,
+                                                                            left_0_outliers_2D, left_1_outliers_2D,
+                                                 gap=10, label_width=50, title="consensus matchs",
+                                                  save_path=f"consensus matchs/consensus matches for frames {cur_key_frame} and {closure_candidate}.png")
+
         new_pose = BundleAdjusment.flip_Rt(final_left1_extrinsic_mat)
         links_0 = Link.create_links_from_points(left_0_points_2D, right_0_points_2D)
         link_0_dict = {(cur_key_frame, i): links_0[i] for i in range(len(links_0))}
@@ -310,7 +389,10 @@ class PoseGraph:
         return pose_graph
 
     def optimize(self):
-        self.optimizer = gtsam.LevenbergMarquardtOptimizer(self._pose_graph, self._initial_est)
+        if not self._is_optimized:
+            self.optimizer = gtsam.LevenbergMarquardtOptimizer(self._pose_graph, self._initial_est)
+        else:
+            self.optimizer = gtsam.LevenbergMarquardtOptimizer(self._pose_graph, self._optimized_values)
         result = self.optimizer.optimize()
         self._optimized_values = result
         self._is_optimized = True

@@ -119,7 +119,8 @@ class Visualizer:
 
     @staticmethod
     def display_matches_4_cams(left_0_points_2D, right_0_points_2D, left_1_points_2D,
-                               right_1_points_2D, image_pair_0=0, image_pair_1=1, num_points_display=None):
+                               right_1_points_2D, image_pair_0=0, image_pair_1=1,
+                               num_points_display=None, save_path='4cams_opencv.png'):
         indeices = np.random.randint(0, len(left_0_points_2D), num_points_display)
         if num_points_display is not None:
             left_0_points_2D = left_0_points_2D[indeices]
@@ -177,7 +178,7 @@ class Visualizer:
         plt.axis('off')
         plt.title('Corresponding Points Across the 2 Stereo Pairs', fontsize=16)
         plt.tight_layout()
-        plt.savefig('4cams_opencv.png')
+        plt.savefig(save_path)
         # plt.show()
 
     # Function to create a cone representing the camera
@@ -309,7 +310,7 @@ class Visualizer:
         plt.scatter(ground_truth_centers[:, 0], ground_truth_centers[:, 1], color=ground_truth_colors,
                     label='Ground Truth Centers', s=s)
 
-        save_name = 'Camera Centers vs Ground 2D_100_split.png'
+        save_name = 'Camera Centers vs Ground 2D.png'
         plt.xlabel('X')
         plt.ylabel('Z')
         plt.title('Camera Centers vs Ground Truth Centers')
@@ -426,6 +427,56 @@ class Visualizer:
             plt.savefig(save_name)
         if show:
             plt.show()
+
+    @staticmethod
+    def display_key_points_with_inliers_outliers(left0, left1, left_0_points_2D, left_1_points_2D, left_0_outliers_2D,
+                                                 left_1_outliers_2D,
+                                                 gap=10, label_width=0, title="", save_path=""):
+        left_label = np.ones((left0.shape[0], label_width), dtype=np.uint8) * 255
+        right_label = np.ones((left1.shape[0], label_width), dtype=np.uint8) * 255
+        left0_with_label = np.hstack((left_label, left0))
+        left1_with_label = np.hstack((right_label, left1))
+        max_width = max(left0_with_label.shape[1], left1_with_label.shape[1])
+        gap_array = np.ones((gap, max_width), dtype=np.uint8) * 255
+
+        if left0_with_label.shape[1] < max_width:
+            padding = np.ones((left0_with_label.shape[0], max_width - left0_with_label.shape[1]), dtype=np.uint8) * 255
+            left0_with_label = np.hstack((left0_with_label, padding))
+
+        if left1_with_label.shape[1] < max_width:
+            padding = np.ones((left1_with_label.shape[0], max_width - left1_with_label.shape[1]), dtype=np.uint8) * 255
+            left1_with_label = np.hstack((left1_with_label, padding))
+
+        combined_image = np.vstack((left0_with_label, gap_array, left1_with_label))
+        combined_image_color = cv2.cvtColor(combined_image, cv2.COLOR_GRAY2BGR)
+
+        # Plot inliers in cyan
+        for point in left_0_points_2D:
+            x, y = point
+            cv2.circle(combined_image_color, (int(x) + label_width, int(y)), 3, (0, 255, 255), -1)
+        for point in left_1_points_2D:
+            x, y = point
+            cv2.circle(combined_image_color, (int(x) + label_width, int(y) + left0_with_label.shape[0] + gap), 3,
+                       (0, 255, 255), -1)
+
+        # Plot outliers in orange
+        for point in left_0_outliers_2D:
+            x, y = point
+            cv2.circle(combined_image_color, (int(x) + label_width, int(y)), 3, (255, 165, 0), -1)
+        for point in left_1_outliers_2D:
+            x, y = point
+            cv2.circle(combined_image_color, (int(x) + label_width, int(y) + left0_with_label.shape[0] + gap), 3,
+                       (255, 165, 0), -1)
+
+        plt.figure(figsize=(12, 8))
+        plt.imshow(combined_image_color)
+        plt.title(title)
+        plt.axis('off')
+        if save_path:
+            plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+            # plt.show()
+            # plt.close()
+
     @staticmethod
     def display_key_points(Left_img, right_img, keypoints1, keypoints2, good_matches=None,
                 bad_matches=None, gap=10, label_width=50,
