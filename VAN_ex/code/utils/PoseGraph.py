@@ -19,6 +19,8 @@ INITIAL_POSE_SIGMA = VISUALIZATION_CONSTANT * np.concatenate((np.deg2rad([1, 1, 
 
 class PoseGraph:
     def __init__(self, bundle_object, processor, do_loop_closure=False):
+        self.loop_closure_keyframes_indices = None
+        self.all_loop_closure_frames = None
         self.loop_closure_pair_to_optimized_values = dict()
         self._is_optimized = False
         self._optimized_values = None
@@ -40,12 +42,12 @@ class PoseGraph:
         self.key_frames_to_absolute_camera_poses_gtsam = self.bundle_object.key_frames_to_absolute_camera_poses_gtsam
         self.ground_truth_locations = np.array(self.get_ground_truth_locations())
         self._pose_graph = self.create_pose_graph()
+        self.initial_location_uncertainty_per_frame = self.get_location_uncertainties_for_entire_graph()
         self.optimize()
         if self.do_loop_closure:
             self.total_num_loop_closures = 0
             self.loop_closure_frames_counter = 0
             self.create_initial_loop_closure_graph()
-            self.initial_location_uncertainty_per_frame = self.get_location_uncertainties_for_entire_graph()
             self.optimize_pose_graph_with_loop_closures()
             self.final_location_uncertainty_per_frame = self.get_location_uncertainties_for_entire_graph()
 
@@ -56,8 +58,15 @@ class PoseGraph:
 
     def get_location_uncertainties_for_entire_graph(self):
         all_uncertainty_sizes = []
+        self.marginals = self.get_marginals()
         for key_frame in self.key_frames:
-            cov = self.marginals.marginalCovariance(gtsam.symbol("c", key_frame))  # get the covariance for each pose
+
+            # the covariance of the key frame relative to the starting frame
+            keys = gtsam.KeyVector()
+            keys.append(gtsam.symbol('c', 0))
+            keys.append(gtsam.symbol('c', key_frame))
+            cov = np.linalg.inv(self.marginals.jointMarginalInformation(keys).at(keys[-1], keys[-1]))
+
             location_cov = cov[3:, 3:]  # take the bottom left 3 by 3 matrix
             volume = np.sqrt(np.linalg.det(location_cov))
             uncertainty_size = volume
@@ -66,15 +75,8 @@ class PoseGraph:
 
     def save_cur_camera_locations_status_vs_ground_truth(self):
         cur_camera_centers = self.get_camera_centers_from_gtsam_graph()
-        all_pairs_as_keys = [self.loop_closure_pair_to_optimized_values[i][1] for i in
-                             range(len(self.loop_closure_pair_to_optimized_values))]
-        all_loop_closure_frames = []
-        for pairs in all_pairs_as_keys:
-            for i in range(len(pairs)):
-                all_loop_closure_frames.append(int(list(pairs)[i][0]))
-                all_loop_closure_frames.append(int(list(pairs)[i][1]))
-        all_loop_closure_frames = np.array(all_loop_closure_frames)
-        loop_closure_keyframes_indices = np.where(np.isin(self.key_frames, all_loop_closure_frames))[0]
+        self.all_loop_closure_frames, self.loop_closure_keyframes_indices = self.get_loop_closure_frames()
+        self.loop_closure_keyframes_indices = np.where(np.isin(self.key_frames, self.all_loop_closure_frames))[0]
         margin = 40
 
         # Calculate limits
@@ -94,7 +96,7 @@ class PoseGraph:
         ax.scatter(ground_truth_2D[:, 0], ground_truth_2D[:, 1], s=1, color='red', label='ground truth')
 
         # Highlight loop closure frames
-        loop_closure_2D = cur_camera_centers[loop_closure_keyframes_indices][:, [0, 2]]
+        loop_closure_2D = cur_camera_centers[self.loop_closure_keyframes_indices][:, [0, 2]]
         ax.scatter(loop_closure_2D[:, 0], loop_closure_2D[:, 1], s=10, color='green', label='loop closure frames')
 
         # Set axis limits
@@ -107,7 +109,19 @@ class PoseGraph:
         # Save the plot in high resolution
         plt.legend()
         plt.savefig(f'all_loop_closure_stages/stage_{self.loop_closure_frames_counter}.png', dpi=600)
+        plt.close()
 
+    def get_loop_closure_frames(self):
+        all_pairs_as_keys = [self.loop_closure_pair_to_optimized_values[i][1] for i in
+                             range(len(self.loop_closure_pair_to_optimized_values))]
+        all_loop_closure_frames = []
+        for pairs in all_pairs_as_keys:
+            for i in range(len(pairs)):
+                all_loop_closure_frames.append(int(list(pairs)[i][0]))
+                all_loop_closure_frames.append(int(list(pairs)[i][1]))
+        all_loop_closure_frames = np.array(all_loop_closure_frames)
+        loop_closure_keyframes_indices = np.where(np.isin(self.key_frames,all_loop_closure_frames))[0]
+        return all_loop_closure_frames, loop_closure_keyframes_indices
 
     def get_camera_centers_from_gtsam_graph(self):
             camera_centers = []
@@ -284,9 +298,10 @@ class PoseGraph:
                                                                                     right_0_points_2D[pnp_inliers],
                                                                                     right_1_points_2D[pnp_inliers])
         Visualizer.display_key_points_with_inliers_outliers(left_0, left_1, left_0_points_2D, left_1_points_2D,
-                                                                            left_0_outliers_2D, left_1_outliers_2D,
-                                                 gap=10, label_width=50, title="consensus matchs",
-                                                  save_path=f"consensus matchs/consensus matches for frames {cur_key_frame} and {closure_candidate}.png")
+                                                            left_0_outliers_2D, left_1_outliers_2D,
+                                                             gap=10, label_width=50, title="consensus matches",
+                                                                  save_path=f"consensus matches/consensus matches for frames "
+                                                                            f"{cur_key_frame} and {closure_candidate}.png")
 
         new_pose = BundleAdjusment.flip_Rt(final_left1_extrinsic_mat)
         links_0 = Link.create_links_from_points(left_0_points_2D, right_0_points_2D)
@@ -405,7 +420,10 @@ class PoseGraph:
             return self._pose_graph.error(self._initial_est)
 
     def get_marginals(self):
-        marginals = gtsam.Marginals(self._pose_graph, self._optimized_values)
+        if self._is_optimized:
+            marginals = gtsam.Marginals(self._pose_graph, self._optimized_values)
+        else:
+            marginals = gtsam.Marginals(self._pose_graph, self._initial_est)
         return marginals
 
     @staticmethod
