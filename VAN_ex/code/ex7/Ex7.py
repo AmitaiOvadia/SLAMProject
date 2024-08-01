@@ -86,20 +86,27 @@ def task_7_1(tracking_db, processor):
 
 def plot_location_uncertainty(pose_graph):
     plt.figure()
+    loop_closure_frames = pose_graph.loop_closure_keyframes_indices
     initial_uncertainty_sizes = pose_graph.initial_location_uncertainty_per_frame
     final_uncertainty_sizes = pose_graph.final_location_uncertainty_per_frame
+
     plt.plot(initial_uncertainty_sizes, label="Initial uncertainty", color="red")
-    plt.plot(final_uncertainty_sizes, label="final uncertainty", color="blue")
-    plt.yscale('log')
-    plt.xlabel('key frame')
-    plt.ylabel('Uncertainty Size (log scale)')
-    plt.title('Uncertainty Sizes on Logarithmic Scale')
+    plt.plot(final_uncertainty_sizes, label="Final uncertainty", color="blue")
+
+    # Scatter plot for loop closure frames, setting y-values slightly above zero for visibility
+    plt.scatter(loop_closure_frames, final_uncertainty_sizes[loop_closure_frames], label="Loop closure frames", color="green", s=10, zorder=5)
+
+    plt.yscale('log', base=2)
+    plt.xlabel('Key frame')
+    plt.ylabel('Uncertainty Size (log scale, base 2)')
+    plt.title('Uncertainty Sizes on Logarithmic Scale (base 2)')
     plt.legend()
-    plt.savefig("Uncertainty sizes before and after loop closure.png", dpi=600)
+    plt.savefig("Uncertainty_sizes_before_and_after_loop_closure.png", dpi=600)
     plt.close()
 
 
 def absolute_location_error_before_vs_after_loop_closures(all_optimized_values, pose_graph):
+    all_loop_closure_frames, loop_closure_keyframes_indices = pose_graph.get_loop_closure_frames()
     ground_truth_key_frames = pose_graph.ground_truth_locations[pose_graph.key_frames]
     all_camera_centers_initial = all_optimized_values[0][-1]
     all_camera_centers_final = all_optimized_values[len(all_optimized_values) - 1][-1]
@@ -108,12 +115,16 @@ def absolute_location_error_before_vs_after_loop_closures(all_optimized_values, 
     plt.figure()
     plt.plot(l2_distance_before_loop_closure, label="L2 distance before loop closure", color="red")
     plt.plot(l2_distance_after_loop_closure, label="L2 distance after loop closure", color="blue")
+    plt.scatter(loop_closure_keyframes_indices, np.zeros_like(loop_closure_keyframes_indices),
+                label="Loop closure keyframes", color="green")
     plt.legend()
     plt.title("L2 Distance Before and after loop closure")
     plt.savefig("L2_distance_before_vs_after_loop_closure.png", dpi=600)
 
 
-def plot_locations_with_covariance_gtsam(all_loop_closure_frames, all_optimized_values, ground_truth_locations):
+def plot_locations_with_covariance_gtsam(all_loop_closure_frames,
+                                         all_optimized_values,
+                                         ground_truth_locations):
     # Calculate limits
     margin = 50
     xmin = ground_truth_locations[:, 0].min() - margin
