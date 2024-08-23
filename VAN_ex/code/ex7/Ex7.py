@@ -15,8 +15,10 @@ import pandas as pd
 import plotly.graph_objects as go
 
 # TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc'
-TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc'
-
+# TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc'
+# TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc_y_1.5_1e-4_blur_1_it_50_akaze'
+TRACKING_DB_PATH = '../ex4/tracking_db_2_acc_y_2_1e-3_blur_1_it_50_akaze'
+POSE_GRAPH_NAME = 'pose_graph3'
 
 
 def plot_camera_centers_with_labels(bundle_object):
@@ -155,9 +157,17 @@ def plot_locations_with_covariance_gtsam(all_loop_closure_frames,
         plt.close()
         del fig
 
+def create_and_save_pose_graph(tracking_db, processor):
+    bundle_object = BundleAdjusment(tracking_db)
+    bundle_object.create_and_solve_all_bundle_windows()
+    pose_graph = PoseGraph(bundle_object, processor, do_loop_closure=True)
+    pose_graph.serialize(POSE_GRAPH_NAME)
+
+
 
 if "__main__" == __name__:
     processor = ImageProcessor()
     tracking_db = TrackingDB(processor.K, processor.M1, processor.M2)
     tracking_db.load(TRACKING_DB_PATH)
-    task_7_1(tracking_db, processor)
+    # task_7_1(tracking_db, processor)
+    create_and_save_pose_graph(tracking_db, processor)
