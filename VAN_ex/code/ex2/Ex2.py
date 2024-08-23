@@ -1,11 +1,15 @@
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from utils import utils
 from utils import visualize
 import numpy as np
 from matplotlib import pyplot as plt
 import time
 import plotly.graph_objects as go
-
-Y_DISTANCE_THRESHOLD = 1
+Y_DISTANCE_THRESHOLD = 2
 IMAGE_HEIGHT = 376
 
 
@@ -249,7 +253,7 @@ def Q23():
     x_3d_mine = utils.triangulate_points(P1, P2, points_a, points_b)
     display_points_cloud(x_3d_mine, case="my triangulation function")
 
-    x_3d_opencv = utils.triangulate_using_opencv(P1, P2, points_a, points_b)
+    x_3d_opencv = utils.triangulate_points(P1, P2, points_a, points_b)
     display_points_cloud(x_3d_opencv, case="opencv triangulation function")
 
     dists = np.linalg.norm(x_3d_mine - x_3d_opencv, axis=-1)
