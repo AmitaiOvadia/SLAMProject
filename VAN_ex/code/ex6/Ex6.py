@@ -6,14 +6,15 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.BundleAdjusment import BundleAdjusment, Bundelon, PoseGraph
+from utils.BundleAdjusment import BundleAdjusment, Bundelon
+from utils.PoseGraph import PoseGraph
 from ex3.Ex3 import ImageProcessor
 from utils.tracking_database import TrackingDB
 from ex5.Ex5 import display_3d_trajectory_gtsam_function
 # TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc'
-TRACKING_DB_PATH = '../ex4/tracking_db_2_acc_y_2_5e-4_blur_0_it_5_akaze_good'
+TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc'
 DATA_PATH = r"/cs/labs/tsevi/amitaiovadia/SLAMProject/VAN_ex/dataset/sequences/00"
-matplotlib.use('TKAgg')
+# matplotlib.use('TKAgg')
 
 
 
@@ -55,10 +56,10 @@ def task_6_1(tracking_db):
           f"and the associated covariance is {joint_covariance}")
 
 
-def task_6_2(tracking_db):
+def task_6_2(tracking_db, processor):
     bundle_object = BundleAdjusment(tracking_db)
     bundle_object.create_and_solve_all_bundle_windows()
-    pose_graph = PoseGraph(bundle_object)
+    pose_graph = PoseGraph(bundle_object, processor)
     initial_error = pose_graph.get_total_graph_error()
     pose_graph.optimize()
     final_error = pose_graph.get_total_graph_error()
@@ -92,5 +93,5 @@ if "__main__" == __name__:
     processor = ImageProcessor()
     tracking_db = TrackingDB(processor.K, processor.M1, processor.M2)
     tracking_db.load(TRACKING_DB_PATH)
-    task_6_1(tracking_db)
-    task_6_2(tracking_db)
+    # task_6_1(tracking_db)
+    task_6_2(tracking_db, processor)
