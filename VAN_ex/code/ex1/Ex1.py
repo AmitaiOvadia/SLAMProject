@@ -7,7 +7,7 @@ import random
 NUMBER_OF_FEATURES = 128
 NUMBER_OF_FEATURES_TO_SHOW = 500
 RATIO = 0.4
-DATA_PATH = r'/VAN_ex/dataset/sequences/00'
+DATA_PATH = r'/cs/labs/tsevi/amitaiovadia/SLAMProject/VAN_ex/dataset/sequences/00'
 
 
 def read_images(idx):
@@ -21,8 +21,8 @@ def read_images(idx):
     tuple: A tuple containing the left and right images.
     """
     img_name = '{:06d}.png'.format(idx)
-    img1 = cv2.imread(DATA_PATH + '\\image_0\\' + img_name, 0)
-    img2 = cv2.imread(DATA_PATH + '\\image_1\\' + img_name, 0)
+    img1 = cv2.imread(DATA_PATH + '/image_0/' + img_name, 0)
+    img2 = cv2.imread(DATA_PATH + '/image_1/' + img_name, 0)
     return img1, img2
 
 
@@ -176,6 +176,8 @@ def Q11():
     image1, image2 = read_images(0)
     alg = cv2.AKAZE_create()
     key_points_1, descriptors_1, key_points_2, descriptors_2 = detect_features(image1, image2, alg)
+    # key_points_1 = []
+    # key_points_2 = []
     display(image1, image2, key_points_1, key_points_2,
                                   title=f"Keypoints on left and right images", save_name="Keypoints")
 
@@ -218,9 +220,9 @@ def Q14():
 # Usage
 def run_ex1():
     Q11()
-    Q12()
-    Q13()
-    Q14()
+    # Q12()
+    # Q13()
+    # Q14()
 
 
 if __name__ == "__main__":
