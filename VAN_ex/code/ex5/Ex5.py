@@ -501,6 +501,6 @@ if "__main__" == __name__:
     processor = ImageProcessor()
     tracking_db = TrackingDB(processor.K, processor.M1, processor.M2)
     tracking_db.load(TRACKING_DB_PATH)
-    # task_5_1(tracking_db)
-    # task_5_3(tracking_db)
+    task_5_1(tracking_db)
+    task_5_3(tracking_db)
     task_5_4(tracking_db, processor)
