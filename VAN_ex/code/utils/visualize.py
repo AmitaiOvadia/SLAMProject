@@ -24,6 +24,8 @@ class Visualizer:
         """
         points_3D_0 = points_3D_0[points_3D_0[:, 2] < 50]
         points_3D_1 = points_3D_1[points_3D_1[:, 2] < 50]
+        points_3D_0 = points_3D_0[points_3D_0[:, 2] > 0]
+        points_3D_1 = points_3D_1[points_3D_1[:, 2] > 0]
         fig = go.Figure()
 
         # First point cloud
@@ -287,7 +289,7 @@ class Visualizer:
         ))
 
     @staticmethod
-    def plot_trajectories_plt(estimated_camera_centers, ground_truth_centers):
+    def plot_trajectories_plt(estimated_camera_centers, ground_truth_centers, title=""):
         # Ensure the arrays are of the same length
         assert len(estimated_camera_centers) == len(ground_truth_centers), "Arrays must have the same length"
 
@@ -310,7 +312,7 @@ class Visualizer:
         plt.scatter(ground_truth_centers[:, 0], ground_truth_centers[:, 1], color=ground_truth_colors,
                     label='Ground Truth Centers', s=s)
 
-        save_name = 'Camera Centers vs Ground 2D.png'
+        save_name = f'{title} Camera Centers vs Ground 2D.png'
         plt.xlabel('X')
         plt.ylabel('Z')
         plt.title('Camera Centers vs Ground Truth Centers')
@@ -416,15 +418,28 @@ class Visualizer:
         print(f"Plot saved to {file_name}")
 
     @staticmethod
-    def display_2D(array, legend, save, save_name, show, title, xlabel, ylabel):
+    def display_2D(array, legend, save, save_name, show, title, xlabel, ylabel, add_mean=True):
         plt.figure()
-        plt.plot(array)
+
+        # Plot the array
+        plt.plot(array, label=legend)
+
+        # Optionally add the mean line
+        if add_mean:
+            mean_value = np.nanmean(array)
+            plt.axhline(y=mean_value, color='r', linestyle='--', label=f'Mean: {mean_value:.2f}')
+
+        # Set labels, title, and legend
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
-        plt.legend(legend)
         plt.title(title)
+        plt.legend()
+
+        # Save the figure if required
         if save:
             plt.savefig(save_name)
+
+        # Show the plot if required
         if show:
             plt.show()
 

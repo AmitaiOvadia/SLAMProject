@@ -8,7 +8,7 @@ import os
 NUMBER_OF_FEATURES = 128
 IMAGE_HEIGHT = 376
 DATA_PATH = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'VAN_ex', 'dataset', 'sequences', '00')
-AKAZE_THRESH = 1e-4
+AKAZE_THRESH = 3e-4
 DO_BLUR = True
 AKAZE = 'AKAZE'
 SIFT = 'SIFT'
@@ -126,8 +126,10 @@ def match_pair(image_pair_ind):
 
 
 def match_2_images(image1, image2, feature_extractor_name='AKAZE'):
+    distance_func = cv2.NORM_L2
     if feature_extractor_name == AKAZE:
         feature_extractor = cv2.AKAZE_create(threshold=AKAZE_THRESH)  # Lower threshold for more sensitivity
+        # distance_func = cv2.NORM_HAMMING
     elif feature_extractor_name == SIFT:
         feature_extractor = cv2.SIFT.create()
     elif feature_extractor_name == ORB:
@@ -137,7 +139,7 @@ def match_2_images(image1, image2, feature_extractor_name='AKAZE'):
     key_points_1, descriptors_1, key_points_2, descriptors_2 = detect_features(image1, image2,
                                                                                feature_extractor=feature_extractor,
                                                                                blur=DO_BLUR)
-    matches = find_closest_features(descriptors_1, descriptors_2)
+    matches = find_closest_features(descriptors_1, descriptors_2, distance_func=distance_func)
     return key_points_1, key_points_2, descriptors_1, descriptors_2, matches
 
 

@@ -4,11 +4,12 @@ import pickle
 from typing import List, Tuple, Dict, Sequence, Optional
 from timeit import default_timer as timer
 import random
+from utils.visualize import Visualizer
+from matplotlib import pyplot as plt
 
 NO_ID = -1
 
 """ a class that holds a single keypoint data for both left and right images of a stereo frame """
-
 
 class Link:
     x_left: float
@@ -118,6 +119,13 @@ class TrackingDB:
         self.frameId_to_num_keypoints = {}
         self.frameId_to_num_inliers = {}
         self.leftover_links = {}
+
+    def __len__(self):
+        return len(self.frameId_to_camera_center)
+
+    def get_all_camera_poses(self):
+        all_camera_poses = np.array([self.frameId_to_absolute_extrinsic_Rt[frame] for frame in self.all_frames()])
+        return all_camera_poses
 
     def add_num_keypoints(self, num_keypoints: int, frame_id: int) -> None:
         self.frameId_to_num_keypoints[frame_id] = num_keypoints
@@ -429,6 +437,8 @@ class TrackingDB:
             'linkId_to_link': self.linkId_to_link,
             'frameId_to_absolute_extrinsic_Rt': self.frameId_to_absolute_extrinsic_Rt,
             'frameId_to_relative_extrinsic_Rt': self.frameId_to_relative_extrinsic_Rt,
+            'frameId_to_num_keypoints': self.frameId_to_num_keypoints,
+            'frameId_to_num_inliers': self.frameId_to_num_inliers,
             'frameId_to_camera_center': self.frameId_to_camera_center,
             'frameId_to_lfeature': self.frameId_to_lfeature,
             'frameId_to_trackIds_list': self.frameId_to_trackIds_list,
@@ -454,9 +464,11 @@ class TrackingDB:
             self.linkId_to_link = data['linkId_to_link']
             self.frameId_to_absolute_extrinsic_Rt = data['frameId_to_absolute_extrinsic_Rt']
             self.frameId_to_relative_extrinsic_Rt = data['frameId_to_relative_extrinsic_Rt']
-            self.frameId_to_camera_center = data['frameId_to_camera_center'],
+            self.frameId_to_camera_center = data['frameId_to_camera_center']
             self.frameId_to_lfeature = data['frameId_to_lfeature']
             self.frameId_to_trackIds_list = data['frameId_to_trackIds_list']
+            self.frameId_to_num_keypoints = data['frameId_to_num_keypoints']
+            self.frameId_to_num_inliers = data['frameId_to_num_inliers']
             self.prev_frame_links = data['prev_frame_links']
             self.leftover_links = data['leftover_links']
             self.inlers_per_frame = data['percentage_of_inliers_per_frame']
@@ -625,3 +637,23 @@ class TrackingDB:
         print(f"Maximum track length: {max_track_length}")
         print(f"Minimum track length: {min_track_length}")
         print(f"Mean number of frame links: {mean_frame_links:.2f}")
+
+    def plot_num_matches_and_inlier_percentage(self):
+        self.frameId_to_num_inliers[0] = self.frameId_to_num_keypoints[0] = np.nan
+        num_matches_per_frame = np.array([self.frameId_to_num_keypoints[frame] for frame in self.all_frames()])
+        percentage_of_inliers_per_frame = np.array(
+            [100 * (self.frameId_to_num_inliers[frame] / num_matches_per_frame[frame])
+             for frame in self.all_frames()])
+
+        Visualizer.display_2D(array=num_matches_per_frame, legend='num_matches_per_frame',
+                              save=True, save_name='num_matches_per_frame.png', show=False,
+                              title='num_matches_per_frame', xlabel='frames', ylabel='num_matches_per_frame',
+                              add_mean=True)
+        Visualizer.display_2D(array=percentage_of_inliers_per_frame, legend='percentage_of_inliers_per_frame',
+                              save=True, save_name='percentage_of_inliers_per_frame.png', show=False,
+                              title='percentage_of_inliers_per_frame', xlabel='frames',
+                              ylabel='percentage_of_inliers_per_frame', add_mean=True)
+
+        return num_matches_per_frame, num_matches_per_frame
+
+

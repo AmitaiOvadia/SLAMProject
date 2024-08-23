@@ -11,288 +11,9 @@ VISUALIZATION_CONSTANT = 1
 INITIAL_POSE_SIGMA = VISUALIZATION_CONSTANT * np.concatenate((np.deg2rad([1, 1, 1]), [0.1, 0.01, 1]))
 
 
-# class Bundelon:
-#     def __init__(self, tracking_db, frames):
-#         self.highest_error = None
-#         self.highest_error_factor = None
-#         self.called_creat_factor_graph = False
-#         self._left_cameras_from_first_frame = None
-#         self._left_cameras_relative_Rts = None
-#         self._optimized_values = None
-#         self._optimizer = None
-#         self._tracking_db = tracking_db
-#         self._bundelon_absolute_frames = frames
-#         self._absolute_last_track_frameId = self._bundelon_absolute_frames[-1]
-#         self._absolue_first_track_frameId = self._bundelon_absolute_frames[0]
-#         self._frameId_to_left_camera_gtsam = self.get_left_cameras_from_first_frame_gtsam()
-#         self._camera_sym = set()
-#         self._landmark_sym = set()
-#         self._initial_est = gtsam.Values()
-#         self._gtsam_calibration = self.get_gtsam_calibration(tracking_db.K, tracking_db.M2)
-#         self._first_frame = self._bundelon_absolute_frames[0]
-#         self._bundelon_trackIds_to_frames = self.get_bundelon_tracks()
-#         self._num_of_tracks = len(self._bundelon_trackIds_to_frames)
-#         self._graph = gtsam.NonlinearFactorGraph()
-#         self._is_optimized = False
-#
-#     def get_all_optimized_camera_poses(self):
-#         if not self.called_creat_factor_graph and not self._is_optimized:
-#             assert "you must create graph and optimize it first"
-#         # camera_poses = []
-#         # for cam_sym in self._camera_sym:
-#         #     cam_pose_gtsam = self._optimized_values.atPose3(cam_sym)
-#         #     Rt = Bundelon.get_Rt_from_gtsam_Pose3(cam_pose_gtsam)
-#         #     camera_poses.append(Rt)
-#         camera_poses_gtsam = [self._optimized_values.atPose3(gtsam.symbol("c", fr)) for fr in self._bundelon_absolute_frames]
-#         camera_poses = [Bundelon.get_Rt_from_gtsam_Pose3(pose) for pose in camera_poses_gtsam]
-#         return camera_poses, camera_poses_gtsam
-#
-#     @staticmethod
-#     def get_Rt_from_gtsam_Pose3(cam_pose):
-#         """
-#         gets a Pose3 tgtsam object and returns an Rt matrix
-#         also flips from cam -> world (gtsam format) to world -> cam
-#         """
-#         R = cam_pose.rotation().matrix()
-#         t = cam_pose.translation()
-#         cam_pose = np.column_stack((R, t))
-#         cam_pose = BundleAdjusment.flip_Rt(cam_pose)  # flip to world -> cam
-#         return cam_pose
-#
-#     def get_camera_pose_bundlon_end(self):
-#         if not self.called_creat_factor_graph and not self._is_optimized:
-#             assert "you must create graph and optimize it first"
-#         cam_sym = gtsam.symbol("c", self._absolute_last_track_frameId)
-#         cam_pose_gtsam = self._optimized_values.atPose3(cam_sym)
-#         cam_pose = Bundelon.get_Rt_from_gtsam_Pose3(cam_pose_gtsam)
-#         return cam_pose, cam_pose_gtsam
-#
-#     def get_optimized_landmarks_3d(self):
-#         if not self.called_creat_factor_graph and not self._is_optimized:
-#             assert "you must create graph and optimize it first"
-#         landmarks_3d = []
-#         for landmark_sym in self._landmark_sym:
-#             landmark = self._optimized_values.atPoint3(landmark_sym)
-#             landmarks_3d.append(landmark)
-#         return landmarks_3d
-#
-#     def get_total_graph_error(self):
-#         if self._is_optimized:
-#             return self._graph.error(self._optimized_values)
-#         elif not self._is_optimized:
-#             return self._graph.error(self._initial_est)
-#
-#     def get_average_graph_error(self):
-#         if self._is_optimized:
-#             return self._graph.error(self._optimized_values) / self._graph.size()
-#         elif not self._is_optimized:
-#             return self._graph.error(self._initial_est) / self._graph.size()
-#
-#     def get_factor_graph(self):
-#         if not self.called_creat_factor_graph:
-#             assert "you must create graph first"
-#         return self._graph
-#
-#     def get_optimized_values_gtsam_format(self):
-#         if not self.called_creat_factor_graph and not self._is_optimized:
-#             assert "you must create graph and optimize it first"
-#         return self._optimized_values
-#
-#     def get_initial_estimates(self):
-
-
-
-#         if not self.called_creat_factor_graph:
-#             assert "you must create graph first"
-#         return self._initial_est
-#
-#     def create_bundelon_factor_graph(self):
-#         self.highest_error_factor = None
-#         self.highest_error = -1
-#
-#         self.called_creat_factor_graph = True
-#         # add initial estimates for poses
-#         for relative_frame, absolute_frame in enumerate(self._bundelon_absolute_frames):
-#             left_pose_sym = gtsam.symbol("c", absolute_frame)  # the symbols are in absolute frames!
-#             self._camera_sym.add(left_pose_sym)
-#             cur_cam_pose = self._frameId_to_left_camera_gtsam[absolute_frame]
-#             gtsam_left_cam_pose = gtsam.Pose3(cur_cam_pose)  # supposed to be the origin
-#             self._initial_est.insert(left_pose_sym, gtsam_left_cam_pose)
-#             if relative_frame == 0:  # if we are in the first frame
-#                 sigmas = INITIAL_POSE_SIGMA
-#                 pose_uncertainty = gtsam.noiseModel.Diagonal.Sigmas(sigmas=sigmas)
-#                 factor = gtsam.PriorFactorPose3(left_pose_sym, gtsam_left_cam_pose, pose_uncertainty)
-#                 self._graph.add(factor)
-#
-#         # create factor graphs add track
-#         for trackId in self._bundelon_trackIds_to_frames.keys():
-#             track_frames = self._bundelon_trackIds_to_frames[trackId]
-#
-#             last_track_frame_for_triangulation = track_frames[-1]
-#
-#             left_camera_last_frame_gtsam = self._frameId_to_left_camera_gtsam[last_track_frame_for_triangulation]
-#             gtsam_left_camera_pose = gtsam.Pose3(left_camera_last_frame_gtsam)
-#             gtsam_frame_to_triangulate_from = gtsam.StereoCamera(gtsam_left_camera_pose, self._gtsam_calibration)
-#
-#             track_links = [self._tracking_db.link(frameId, trackId) for frameId in track_frames]
-#             last_link = track_links[-1]
-#             xl_last, xr_last, y_last = last_link.x_left, last_link.x_right, last_link.y
-#             gtsam_stereo_point2_for_triangulation = gtsam.StereoPoint2(xl_last, xr_last, y_last)
-#
-#             gtsam_p3d = gtsam_frame_to_triangulate_from.backproject(gtsam_stereo_point2_for_triangulation)
-#
-#             if (gtsam_p3d[2] <= 0 or
-#                     # gtsam_p3d[2] > 300 or
-#                     np.linalg.norm(gtsam_p3d) > 200):   # dont let the points be too far, for numerical issues
-#                 continue
-#
-#             p3d_sym = gtsam.symbol("q", trackId)
-#
-#             self._landmark_sym.add(p3d_sym)
-#
-#             self._initial_est.insert(p3d_sym, gtsam_p3d)
-#
-#             # add each frame factor for this track
-#             for track_frameId in track_frames:
-#                 track_frame_link = self._tracking_db.link(track_frameId, trackId)
-#                 gtsam_measurment_pt2 = gtsam.StereoPoint2(track_frame_link.x_left,
-#                                                           track_frame_link.x_right,
-#                                                           track_frame_link.y)
-#
-#                 projection_uncertainty = gtsam.noiseModel.Isotropic.Sigma(dim=3, sigma=1)
-#
-#                 factor = gtsam.GenericStereoFactor3D(measured=gtsam_measurment_pt2,
-#                                                      noiseModel=projection_uncertainty,
-#                                                      poseKey=gtsam.symbol("c", track_frameId),
-#                                                      landmarkKey=p3d_sym,
-#                                                      K=self._gtsam_calibration)
-#
-#                 factor_error = factor.error(self._initial_est)
-#                 if factor_error > self.highest_error:
-#                     self.highest_error_factor = factor
-#                     self.highest_error = factor_error
-#                 self._graph.add(factor)
-#
-#
-#     def get_left_cameras_from_first_frame_gtsam(self):
-#         self._left_cameras_relative_Rts = [self._tracking_db.frameId_to_relative_extrinsic_Rt[frame] for frame in
-#                                            self._bundelon_absolute_frames]
-#         self._left_cameras_from_first_frame = BundleAdjusment.composite_relative_Rts(self._left_cameras_relative_Rts)
-#         left_cameras_from_first_frame_gtsam = [BundleAdjusment.flip_Rt(Rt) for Rt in
-#                                                self._left_cameras_from_first_frame]
-#         frameId_to_left_camera_gtsam = {}
-#         for i, left_cam_gtsam in enumerate(left_cameras_from_first_frame_gtsam):
-#             frameId_to_left_camera_gtsam[self._bundelon_absolute_frames[i]] = left_cam_gtsam
-#         return frameId_to_left_camera_gtsam
-#
-#     def optimize_bundelon(self):
-#         if not self.called_creat_factor_graph:
-#             assert "you must create graph first"
-#         self._optimizer = gtsam.LevenbergMarquardtOptimizer(self._graph, self._initial_est)
-#         self._optimized_values = self._optimizer.optimize()
-#         self._is_optimized = True
-#
-#     def get_relative_motion_covariace(self):
-#         """
-#         get the relative covariance between the start and end of the motion
-#         """
-#         marginals = gtsam.Marginals(self._graph, self._optimized_values)
-#         key_0, key_k = self._bundelon_absolute_frames[0], self._bundelon_absolute_frames[-1]
-#         keys = gtsam.KeyVector()
-#         keys.append(gtsam.symbol('c', key_0))
-#         keys.append(gtsam.symbol('c', key_k))
-#         joint_covariance = np.linalg.inv(marginals.jointMarginalInformation(keys).at(keys[-1], keys[-1]))
-#         return joint_covariance
-#
-#     def get_bundelon_tracks(self, min_length=2):
-#         all_bundelon_tracks = set()
-#         trackId_to_track_frames = {}
-#         for absolute_frame in self._bundelon_absolute_frames:
-#             frame_tracks = self._tracking_db.frameId_to_trackIds_list[absolute_frame]
-#             all_bundelon_tracks.update(frame_tracks)
-#         for trackId in all_bundelon_tracks:
-#             all_track_frames = np.array(self._tracking_db.frames(trackId))
-#             track_frames = all_track_frames[(all_track_frames >= self._absolue_first_track_frameId) &
-#                                             (all_track_frames <= self._absolute_last_track_frameId)]
-#             track_length = len(track_frames)
-#             if track_length >= min_length:
-#                 trackId_to_track_frames[trackId] = track_frames
-#         return trackId_to_track_frames
-#
-#     @staticmethod
-#     def get_gtsam_calibration(K, M2):
-#         fx = K[0, 0]
-#         fy = K[1, 1]
-#         cx = K[0, 2]
-#         cy = K[1, 2]
-#         s = K[0, 1]
-#         baseline = -M2[0, -1]
-#         return gtsam.Cal3_S2Stereo(fx, fy, s, cx, cy, baseline)
-#
-#     @staticmethod
-#     def create_and_solve_2_cameras_bundelon(K, M2, links_0, links_1, initial_guess):
-#         gtsam_calibration = Bundelon.get_gtsam_calibration(K, M2)
-#         graph = gtsam.NonlinearFactorGraph()
-#         initial_est = gtsam.Values()
-#
-#         # Add camera 0 (at the origin)
-#         camera_0_pose_sym = gtsam.symbol("c", 0)
-#         camera_0_pose = gtsam.Pose3()  # Camera 0 is at the origin
-#         initial_est.insert(camera_0_pose_sym, camera_0_pose)
-#
-#         # Add prior for camera 0
-#         sigmas = INITIAL_POSE_SIGMA
-#         pose_uncertainty = gtsam.noiseModel.Diagonal.Sigmas(sigmas=sigmas)
-#         prior_factor = gtsam.PriorFactorPose3(camera_0_pose_sym, camera_0_pose, pose_uncertainty)
-#         graph.add(prior_factor)
-#
-#         # Add camera 1 with initial guess
-#         camera_1_pose_sym = gtsam.symbol("c", 1)
-#         initial_est.insert(camera_1_pose_sym, gtsam.Pose3(initial_guess))
-#
-#         # Process tracks (links_0 and links_1)
-#         track_id = 0
-#         for link_0, link_1 in zip(links_0, links_1):
-#             if not link_0 or not link_1:
-#                 continue
-#
-#             # Triangulate the 3D point from the observations of camera 0
-#             xl_last, xr_last, y_last = link_0.x_left, link_0.x_right, link_0.y
-#             gtsam_stereo_point2_for_triangulation = gtsam.StereoPoint2(xl_last, xr_last, y_last)
-#             gtsam_frame_to_triangulate_from = gtsam.StereoCamera(gtsam.Pose3(), gtsam_calibration)
-#             gtsam_p3d = gtsam_frame_to_triangulate_from.backproject(gtsam_stereo_point2_for_triangulation)
-#
-#             if gtsam_p3d[2] <= 0 or np.linalg.norm(gtsam_p3d) > 200:  # Exclude points too far
-#                 continue
-#
-#             p3d_sym = gtsam.symbol("q", track_id)
-#             initial_est.insert(p3d_sym, gtsam_p3d)
-#             track_id += 1
-#
-#             # Add stereo factors for camera 0 and camera 1
-#             link_list = [link_0, link_1]
-#             for cam_idx in range(2):
-#                 link = link_list[cam_idx]
-#                 gtsam_measurment_pt2 = gtsam.StereoPoint2(link.x_left, link.x_right, link.y)
-#                 projection_uncertainty = gtsam.noiseModel.Isotropic.Sigma(dim=3, sigma=1)
-#
-#                 factor = gtsam.GenericStereoFactor3D(
-#                     measured=gtsam_measurment_pt2,
-#                     noiseModel=projection_uncertainty,
-#                     poseKey=gtsam.symbol("c", cam_idx),
-#                     landmarkKey=p3d_sym,
-#                     K=gtsam_calibration
-#                 )
-#
-#                 graph.add(factor)
-#
-#         # Optimize the graph
-#         optimizer = gtsam.LevenbergMarquardtOptimizer(graph, initial_est)
-#         optimized_values = optimizer.optimize()
-#         return optimized_values
-
 class Bundelon:
     def __init__(self, tracking_db, frames):
+        self.initial_error = None
         self.highest_error = None
         self.highest_error_factor = None
         self.called_creat_factor_graph = False
@@ -356,12 +77,57 @@ class Bundelon:
             return self._graph.error(self._optimized_values)
         else:
             return self._graph.error(self._initial_est)
+    #
+    # def get_average_graph_error(self):
+    #     if self._is_optimized:
+    #         return self._graph.error(self._optimized_values) / self._graph.size()
+    #     else:
+    #         return self._graph.error(self._initial_est) / self._graph.size()
 
-    def get_average_graph_error(self):
-        if self._is_optimized:
-            return self._graph.error(self._optimized_values) / self._graph.size()
-        else:
-            return self._graph.error(self._initial_est) / self._graph.size()
+    def get_initial_reprojection_erros(self):
+        reprojection_errors = self.get_pose_graph_reprojection_erros(self._graph, self._initial_est)
+        return reprojection_errors
+
+    def get_final_reprojection_erros(self):
+        if not self._is_optimized:
+            assert "optimize graph first"
+        reprojection_errors = self.get_pose_graph_reprojection_erros(self._graph, self._optimized_values)
+        return reprojection_errors
+
+    def get_pose_graph_reprojection_erros(self, factor_graph, estimations):
+        reprojection_errors = []
+        for i in range(factor_graph.size()):
+            factor = factor_graph.at(i)  # Access the factor at index i
+
+            # Check if the factor is a GenericStereoFactor3D
+            if isinstance(factor, gtsam.GenericStereoFactor3D):
+                pose_key = factor.keys()[0]
+                landmark_key = factor.keys()[1]
+
+                # Get the current estimate for the camera pose and 3D point
+                estimated_pose = estimations.atPose3(pose_key)
+                estimated_landmark = estimations.atPoint3(landmark_key)
+
+                # Create a StereoCamera object
+                stereo_camera = gtsam.StereoCamera(estimated_pose, self._gtsam_calibration)
+
+                # Reproject the 3D point to get the 2D pixel coordinates
+                reprojected_stereo_point = stereo_camera.project(estimated_landmark)
+
+                # Get the measured 2D pixel coordinates from the factor
+                measured_stereo_point = factor.measured()
+
+                # Calculate the reprojection error in pixels
+                error_xl = reprojected_stereo_point.uL() - measured_stereo_point.uL()
+                error_xr = reprojected_stereo_point.uR() - measured_stereo_point.uR()
+                error_y = reprojected_stereo_point.v() - measured_stereo_point.v()
+
+                # reprojection error
+                reprojection_error = np.sqrt(error_xl ** 2 + error_xr ** 2 + 2 * error_y ** 2)
+                reprojection_errors.append(reprojection_error)
+
+        reprojection_errors = np.array(reprojection_errors)
+        return reprojection_errors
 
     def get_factor_graph(self):
         if not self.called_creat_factor_graph:
@@ -466,6 +232,18 @@ class Bundelon:
             self._tracking_db.M2,
             self._tracking_db.linkId_to_link
         )
+        self.initial_error = self._graph.error(self._initial_est) / self._graph.size()
+
+    def get_initial_error(self):
+        return self.initial_error
+
+    def get_error_after_optimization(self):
+        if not self._is_optimized:
+            assert "optimize first"
+        return self._graph.error(self._optimized_values) / self._graph.size()
+
+    def get_error_before_optimization(self):
+        return self._graph.error(self._initial_est) / self._graph.size()
 
     def get_left_cameras_from_first_frame_gtsam(self):
         self._left_cameras_relative_Rts = [self._tracking_db.frameId_to_relative_extrinsic_Rt[frame] for frame in
@@ -613,6 +391,7 @@ class BundleAdjusment:
 
         self.all_cameras = np.array(self.all_cameras)
         self.all_camera_centers = np.array(self.all_camera_centers)
+
 
     def get_global_Rt(self, absolute_key_frame_T, local_camera_pose):
         local_T = np.row_stack((local_camera_pose, [0, 0, 0, 1]))

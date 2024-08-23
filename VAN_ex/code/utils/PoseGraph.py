@@ -11,6 +11,7 @@ from utils.tracking_database import TrackingDB, Link
 from utils import utils
 from utils.BundleAdjusment import BundleAdjusment, Bundelon
 from utils.visualize import Visualizer
+import pickle
 MAHALANOBIS_THERSH = 750
 PNP_INLIERS_THRESHOLD = 50
 VISUALIZATION_CONSTANT = 1
@@ -19,7 +20,11 @@ INITIAL_POSE_SIGMA = VISUALIZATION_CONSTANT * np.concatenate((np.deg2rad([1, 1, 
 
 class PoseGraph:
     def __init__(self, bundle_object, processor, do_loop_closure=False):
+        self.loop_closure_pair_to_camera_centers = None
+        self.loop_closure_pair_to_marginals = None
+        self.loop_closure_pair_to_values = None
         self.loop_closure_keyframes_indices = None
+        self.loop_closure_pair_to_pose_graph = None
         self.all_loop_closure_frames = None
         self.loop_closure_pair_to_optimized_values = dict()
         self._is_optimized = False
@@ -40,7 +45,7 @@ class PoseGraph:
         self.key_frames_to_relative_motion_covariance = self.bundle_object.key_frames_to_relative_motion_covariance
         self.key_frames_to_relative_camera_poses_gtsam = self.bundle_object.key_frames_to_relative_camera_poses_gtsam
         self.key_frames_to_absolute_camera_poses_gtsam = self.bundle_object.key_frames_to_absolute_camera_poses_gtsam
-        self.ground_truth_locations = np.array(self.get_ground_truth_locations())
+        self.ground_truth_locations, self.ground_truth_poses = self.get_ground_truth_locations()
         self._pose_graph = self.create_pose_graph()
         self.initial_location_uncertainty_per_frame = self.get_location_uncertainties_for_entire_graph()
         self.optimize()
@@ -51,10 +56,23 @@ class PoseGraph:
             self.optimize_pose_graph_with_loop_closures()
             self.final_location_uncertainty_per_frame = self.get_location_uncertainties_for_entire_graph()
 
+    def get_all_cameras(self):
+        all_camera_poses_gtsam = []
+        for key_frame in self.key_frames[:-1]:
+            global_pose = self._optimized_values.atPose3(gtsam.symbol("c", key_frame))
+            bundelon = self.bundle_object.key_frames_to_bundelons[key_frame]
+            _, relative_poses_gtsam = bundelon.get_all_optimized_camera_poses()
+            global_poses = [global_pose.compose(relative_pose) for relative_pose in relative_poses_gtsam]
+            all_camera_poses_gtsam += global_poses[:-1]
+        all_camera_poses_gtsam += [self._optimized_values.atPose3(gtsam.symbol("c", self.key_frames[-1]))]
+        all_camera_centers = [pose.translation() for pose in all_camera_poses_gtsam]
+        all_camera_poses = [Bundelon.get_Rt_from_gtsam_Pose3(pose) for pose in all_camera_poses_gtsam]
+        return np.array(all_camera_poses), np.array(all_camera_poses_gtsam), np.array(all_camera_centers)
+
     def get_ground_truth_locations(self):
         true_Rt = self.processor.load_all_ground_truth_camera_matrices(self.processor.GROUND_TRUTH_PATH)
         ground_truth_centers = [utils.get_camera_center_from_Rt(Rt) for Rt in true_Rt]
-        return ground_truth_centers
+        return np.array(ground_truth_centers), np.array(true_Rt)
 
     def get_location_uncertainties_for_entire_graph(self):
         all_uncertainty_sizes = []
@@ -133,35 +151,15 @@ class PoseGraph:
             return camera_centers
 
     def optimize_pose_graph_with_loop_closures(self,
-                                               look_back_frames=20,
+                                               look_back_frames=60,
                                                candidates_per_frame=4):
-        """
-        now do an iterative process:
-        for every key_frame:
-            look back to all other key_frames
-            find possible loop closure candidates
-            for every previous key frame:
-                * find the shortest path to it
-                * find the approximation for the covariance as the sum of the covariances of the poses between them
-                * find the mahalanobis distance using this covariance approximation
 
-            find loop closure frames
-            for every loop closer candidate:
-                * match left to left cameras
-                * do pnp
-                * if there are more then thresh inliers use it for loop closure
-
-            for every loop closure frame:
-                using the Rt calculated before:
-                do bundle of 2 poses between the loop closure frames and the current frame
-                get the refined Rt and covariance between them
-                add a factor to the pose graph between the 2 frames
-                optimize the pose graph with the loop closure
-                add the new edge to the loop closure graph
-                update all the edges as the relative covariance weight between each of them
-        """
         self.save_cur_camera_locations_status_vs_ground_truth()
         self.loop_closure_pair_to_optimized_values = {0: (self._optimized_values, dict(), self.get_marginals(), self.get_camera_centers_from_gtsam_graph())}
+        self.loop_closure_pair_to_values = {0: self._optimized_values}
+        self.loop_closure_pair_to_marginals = {0: self.get_marginals()}
+        self.loop_closure_pair_to_camera_centers = {0: self.get_camera_centers_from_gtsam_graph()}
+        self.loop_closure_pair_to_pose_graph = {0: self._pose_graph}
         for pose_ind in range(look_back_frames, len(self.key_frames)):
             cur_key_frame = int(self.key_frames[pose_ind])
             cur_pose_vector = self.get_key_frame_pose_vector(cur_key_frame)
@@ -187,7 +185,7 @@ class PoseGraph:
                 loop_closure_info = {}
                 for closure_candidate, dist in loop_closer_candidates:
                     try:
-                        pose_covariance, optimized_pose, original_pose = self.get_bundel_pose_and_covariance(
+                        pose_covariance, optimized_pose, _ = self.get_bundel_pose_and_covariance(
                                                                                closure_candidate, cur_key_frame)
                         # add a pose to the pose graph
                         loop_closure_info[(cur_key_frame, closure_candidate)] = [optimized_pose, pose_covariance]
@@ -204,6 +202,10 @@ class PoseGraph:
                                                                                              loop_closure_info.keys(),
                                                                                              self.get_marginals(),
                                                                                              self.get_camera_centers_from_gtsam_graph())
+                    self.loop_closure_pair_to_values[self.loop_closure_frames_counter] = self._optimized_values
+                    self.loop_closure_pair_to_marginals[self.loop_closure_frames_counter] = self.get_marginals()
+                    self.loop_closure_pair_to_camera_centers[self.loop_closure_frames_counter] = self.get_camera_centers_from_gtsam_graph()
+                    self.loop_closure_pair_to_pose_graph[self.loop_closure_frames_counter] = self._pose_graph
                     self.save_cur_camera_locations_status_vs_ground_truth()
 
 
@@ -425,6 +427,55 @@ class PoseGraph:
         else:
             marginals = gtsam.Marginals(self._pose_graph, self._initial_est)
         return marginals
+
+    def serialize(self, base_filename):
+        data = {
+            'loop_closure_keyframes_indices': self.loop_closure_keyframes_indices,
+            'all_loop_closure_frames': self.all_loop_closure_frames,
+            '_is_optimized': self._is_optimized,
+            '_optimized_values': self._optimized_values,
+            '_initial_est': self._initial_est,
+            'key_frames': self.key_frames,
+            'ground_truth_locations': self.ground_truth_locations,
+            '_pose_graph': self._pose_graph,
+            'initial_location_uncertainty_per_frame': self.initial_location_uncertainty_per_frame,
+            'final_location_uncertainty_per_frame': getattr(self, 'final_location_uncertainty_per_frame', None),
+            'loop_closure_graph': self.loop_closure_graph,
+            'total_num_loop_closures': self.total_num_loop_closures,
+            'loop_closure_frames_counter': self.loop_closure_frames_counter,
+            'loop_closure_pair_to_values': self.loop_closure_pair_to_values,
+            'loop_closure_pair_to_camera_centers': self.loop_closure_pair_to_camera_centers,
+            'loop_closure_pair_to_pose_graph' : self.loop_closure_pair_to_pose_graph,
+        }
+        filename = base_filename + '.pkl'
+        with open(filename, "wb") as file:
+            pickle.dump(data, file)
+        print('PoseGraph serialized to', filename)
+
+    def load(self, base_filename):
+        # Load the serialized data
+        filename = base_filename + '.pkl'
+        with open(filename, 'rb') as file:
+            data = pickle.load(file)
+
+            self.loop_closure_keyframes_indices = data['loop_closure_keyframes_indices']
+            self.all_loop_closure_frames = data['all_loop_closure_frames']
+            self._is_optimized = data['_is_optimized']
+            self._optimized_values = data['_optimized_values']
+            self._initial_est = data['_initial_est']
+            self.key_frames = data['key_frames']
+            self.ground_truth_locations = data['ground_truth_locations']
+            self._pose_graph = data['_pose_graph']
+            self.initial_location_uncertainty_per_frame = data['initial_location_uncertainty_per_frame']
+            self.final_location_uncertainty_per_frame = data['final_location_uncertainty_per_frame']
+            self.loop_closure_graph = data['loop_closure_graph']
+            self.total_num_loop_closures = data['total_num_loop_closures']
+            self.loop_closure_frames_counter = data['loop_closure_frames_counter']
+            self.loop_closure_pair_to_values = data['loop_closure_pair_to_values']
+            self.loop_closure_pair_to_camera_centers = data['loop_closure_pair_to_camera_centers']
+            self.loop_closure_pair_to_pose_graph = data['loop_closure_pair_to_pose_graph']
+
+        print('PoseGraph loaded from', filename)
 
     @staticmethod
     def gtsam_pose3_to_vector(pose):
