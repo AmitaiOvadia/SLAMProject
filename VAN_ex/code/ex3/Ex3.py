@@ -299,6 +299,7 @@ class ImageProcessor:
         dists = np.linalg.norm(points_3D_pair0_after_T - points_3D_pair1, axis=1)
         med = np.median(dists)
         mean = np.mean(dists)
+        points_3D_pair0_after_T = np.zeros_like(points_3D_pair0_after_T)
         Visualizer.plot_point_clouds_and_cameras(points_3D_pair1, points_3D_pair0_after_T,
                                                  extrinsic_mat_0=self.M1, extrinsic_mat_1=self.M2)
 
@@ -418,7 +419,7 @@ class ImageProcessor:
         estimated_camera_centers = np.array(estimated_camera_centers)
         ground_truth_centers = np.array(ground_truth_centers)
 
-        Visualizer.plot_trajectories_plt(estimated_camera_centers, ground_truth_centers)
+        Visualizer.plot_trajectories_plt(estimated_camera_centers, ground_truth_centers, self.feature_extractor_name)
         Visualizer.plot_all_cameras(estimated_camera_centers, no_y_axis=True)
         Visualizer.plot_all_ground_truth_vs_estimated_cameras(estimated_camera_centers, ground_truth_centers,
                                                               no_y_axis=True)
@@ -436,7 +437,7 @@ class ImageProcessor:
                               legend=['L2 distance'],
                               save=True,
                               save_name='errors_l2.png',
-                              show=False, title='Ground truth vs estimated camera center Errors\n '
+                              show=False, title=f'{self.feature_extractor_name} Ground truth vs estimated camera center Errors\n '
                                                 'in absolute distance',
                               xlabel='Frame Number',
                               ylabel='Error (m)')
@@ -450,7 +451,7 @@ if __name__ == '__main__':
         # BRISK
     ]
     for feature_extractor_name in feature_extractors:
-        processor = ImageProcessor(feature_extractor_name=feature_extractor_name, y_dist_threshold=1, accuracy=1,
-                                   min_ransac_iterations=5)
-        # processor.Q3()
-        processor.run_all_movie()
+        processor = ImageProcessor(feature_extractor_name=feature_extractor_name, y_dist_threshold=2, accuracy=2,
+                                   min_ransac_iterations=10)
+        processor.Q3()
+        # processor.run_all_movie()
