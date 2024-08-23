@@ -20,10 +20,10 @@ import matplotlib.pyplot as plt
 
 
 AKAZE = 'AKAZE'
-SAVE_NAME = "tracking_db_2_acc_y_2_4e-4_blur_1_it_5_akaze"
+SAVE_NAME = "tracking_db_2_acc_y_2_3e-4_blur_1_it_50_akaze"
 RANSAC_ACCURACY = 2
 Y_DIST_TOLERATION = 2
-MIN_RANSAC_ITERATIONS = 5
+MIN_RANSAC_ITERATIONS = 10
 
 
 # Initialize ImageProcessor
@@ -355,7 +355,7 @@ def shift_camera_extrinsic_matrix(Rt, delta_t):
     # Ensure t is a column vector
     # t = t.reshape((3, 1))
 
-    # Update the translation vector
+    # Update the tlation vector
     t += delta_t
     t = t.reshape((3, 1))
     # Construct the new extrinsic matrix
@@ -473,7 +473,7 @@ def Q47(tracking_db):
 
 def show_camera_centers(tracking_db, processor):
 
-    camera_centers_dict = tracking_db.frameId_to_camera_center[0]
+    camera_centers_dict = tracking_db.frameId_to_camera_center
     num_frames = len(camera_centers_dict)
 
     true_Rt = processor.load_all_ground_truth_camera_matrices(processor.GROUND_TRUTH_PATH)[:num_frames]
@@ -483,7 +483,7 @@ def show_camera_centers(tracking_db, processor):
     for i in range(num_frames):
         center_i = camera_centers_dict[i]
         all_centers.append(center_i)
-    all_centers, ground_truth_centers =np.array(all_centers), np.array(ground_truth_centers)
+    all_centers, ground_truth_centers = np.array(all_centers), np.array(ground_truth_centers)
     Visualizer.plot_trajectories_plt(all_centers, ground_truth_centers)
 
 
@@ -493,7 +493,6 @@ if __name__ == '__main__':
     tracking_db = TrackingDB(processor.K, processor.M1, processor.M2)
     tracking_db.load(SAVE_NAME)
     show_camera_centers(tracking_db, processor)
-
     Q42(tracking_db)
     Q43(tracking_db)
     Q44(tracking_db)
