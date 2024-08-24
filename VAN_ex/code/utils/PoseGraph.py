@@ -123,7 +123,7 @@ class PoseGraph:
 
         # Add grid
         ax.grid(True)
-
+        ax.set_title(f'Stage after {self.total_num_loop_closures} successful loop closures')
         # Save the plot in high resolution
         plt.legend()
         plt.savefig(f'all_loop_closure_stages/stage_{self.loop_closure_frames_counter}.png', dpi=600)

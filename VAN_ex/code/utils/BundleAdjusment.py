@@ -67,9 +67,18 @@ class Bundelon:
         if not self.called_creat_factor_graph and not self._is_optimized:
             raise AssertionError("You must create graph and optimize it first")
         landmarks_3d = []
-        for landmark_sym in self._landmark_sym:
-            landmark = self._optimized_values.atPoint3(landmark_sym)
-            landmarks_3d.append(landmark)
+        for i in range(self._graph.size()):
+            factor = self._graph.at(i)  # Access the factor at index i
+
+            # Check if the factor is a GenericStereoFactor3D
+            if isinstance(factor, gtsam.GenericStereoFactor3D):
+                pose_key = factor.keys()[0]
+                landmark_key = factor.keys()[1]
+
+                # Get the current estimate for the camera pose and 3D point
+                estimated_landmark = self._optimized_values.atPoint3(landmark_key)
+                landmarks_3d.append(estimated_landmark)
+        landmarks_3d = np.array(landmarks_3d)
         return landmarks_3d
 
     def get_total_graph_error(self):
@@ -346,12 +355,14 @@ class BundleAdjusment:
             self.key_frames_to_absolute_camera_poses_gtsam[key_frame] = cur_pose_global
             prev_key_frame = key_frame
 
-    def calculate_key_frames_to_landmarks_absolute_coordinates(self):
+    def calculate_key_frames_to_landmarks_absolute_coordinates(self, key_frames_to_absolute_camera_poses_gtsam=None):
         """
         Calculate the absolute coordinates of landmarks given the absolute camera poses for each keyframe
         and fill the self.key_frames_to_landmarks_absolute_coordinates dictionary.
         """
-        for key_frame, camera_pose in self.key_frames_to_absolute_camera_poses_gtsam.items():
+        if key_frames_to_absolute_camera_poses_gtsam is None:
+            key_frames_to_absolute_camera_poses_gtsam = self.key_frames_to_absolute_camera_poses_gtsam
+        for key_frame, camera_pose in key_frames_to_absolute_camera_poses_gtsam.items():
             # Retrieve landmarks in relative coordinates for the current keyframe
             landmarks_relative = self.key_frames_to_landmarks_relative_coordinates.get(key_frame, [])
 
@@ -360,6 +371,7 @@ class BundleAdjusment:
 
             # Store the global landmarks in the dictionary
             self.key_frames_to_landmarks_absolute_coordinates[key_frame] = landmarks_global
+        return self.key_frames_to_landmarks_absolute_coordinates
 
     def calculate_key_frames_to_camera_locations(self):
         if not self._is_optimized:
