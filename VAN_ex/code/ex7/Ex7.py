@@ -17,8 +17,8 @@ import plotly.graph_objects as go
 # TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc'
 # TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc'
 # TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc_y_1.5_1e-4_blur_1_it_50_akaze'
-TRACKING_DB_PATH = '../ex4/tracking_db_2_acc_y_2_1e-3_blur_1_it_50_akaze'
-POSE_GRAPH_NAME = 'pose_graph3'
+TRACKING_DB_PATH = '../ex4/tracking_db_1.5_acc_y_1.5_1e-4_blur_1_it_50_akaze'
+POSE_GRAPH_NAME = 'pose_graph'
 
 
 def plot_camera_centers_with_labels(bundle_object):
