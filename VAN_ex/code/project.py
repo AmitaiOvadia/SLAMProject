@@ -42,7 +42,11 @@ class PoseGraphProcessor:
         self.camera_poses_loop_closure, self.all_camera_poses_gtsam_loop_closure, self.localizations_loop_closure = self.pose_graph.get_all_cameras()
         self.localizations_ground_truth = self.pose_graph.ground_truth_locations
         self.ground_truth_locations, self.ground_truth_poses = self.pose_graph.get_ground_truth_locations()
+
+        key_frames_to_absolute_poses_gtsam = {key_frame: self.all_camera_poses_gtsam_loop_closure[key_frame] for key_frame in self.key_frames}
+        self.key_frames_to_landmarks_absolute_coordinates = self.bundle_object.calculate_key_frames_to_landmarks_absolute_coordinates(key_frames_to_absolute_poses_gtsam)
         # self.plot_factor_erros()
+        a=0
 
     def plot_factor_erros(self):
         plt.figure(dpi=600)
@@ -267,12 +271,28 @@ class PoseGraphProcessor:
 
     def plot_trajectories(self, pnp=True, bundle=True, loop_closure=True,
                           ground_truth=True, only_key_frames=False,
-                          title='Localizations vs Ground Truth', mark_size=0.1):
+                          title='Localizations vs Ground Truth', mark_size=0.1, add_landmarks=False):
         """Plot the trajectories from various localization methods."""
         plt.figure(dpi=600)
         marker = 'o'
         # Scatter plot the x and z coordinates for each localization array with smaller markers
         frames_to_take = self.key_frames if only_key_frames else self.all_frames
+        if add_landmarks:
+            all_landmarks = []
+            for key_frame in self.key_frames:
+                all_landmarks += list(self.key_frames_to_landmarks_absolute_coordinates[key_frame])
+            all_landmarks = np.array(all_landmarks)
+            num_landmarks = all_landmarks.shape[0]
+            display = all_landmarks[np.random.choice(num_landmarks, size=num_landmarks, replace=False)]
+            xmax, ymax, zmax = np.max(self.localizations_ground_truth, axis=0)
+            xmin, ymin, zmin = np.min(self.localizations_ground_truth, axis=0)
+            margin = 30
+            filtered_display = display[
+                (display[:, 0] >= xmin - margin * 2) & (display[:, 0] <= xmax + margin) &  # Filter for x
+                (display[:, 2] >= zmin - margin * 2) & (display[:, 2] <= zmax + margin)  # Filter for z
+                ]
+            plt.scatter(filtered_display[:, 0],
+                        filtered_display[:, 2], color='cyan', s=0.01, marker='.', label='landmarks')
         if pnp:
             plt.scatter(self.localizations_pnp[frames_to_take, 0],
                         self.localizations_pnp[frames_to_take, 2],
@@ -294,6 +314,7 @@ class PoseGraphProcessor:
                         label='Ground Truth',
                     color='red', s=mark_size, marker=marker)
 
+
         # Labels and title
         plt.xlabel('X Coordinate')
         plt.ylabel('Z Coordinate')
@@ -303,8 +324,8 @@ class PoseGraphProcessor:
         plt.legend()
 
         # Show the plot
-        plt.savefig('localizations.png', dpi=600)
-        plt.show()
+        plt.savefig(f'{title}.png', dpi=600)
+        # plt.show()
 
     def absolute_pnp_estimation_error(self):
         title = "Absolute PNP Estimation Error"
@@ -345,12 +366,24 @@ class PoseGraphProcessor:
 
 if __name__ == "__main__":
     pose_graph_processor = PoseGraphProcessor(TRACKING_DB_PATH)
-    pose_graph_processor.plot_relative_errors_sub_sections()
-    pose_graph_processor.plot_relative_errors_for_all_key_frames()
-    pose_graph_processor.absolute_pnp_estimation_error()
-    pose_graph_processor.absolute_pose_graph_estimation_error_before_loop_closure()
-    pose_graph_processor.absolute_pose_graph_estimation_error_after_loop_closure()
-    pose_graph_processor.present_statistics()
-    pose_graph_processor.plot_trajectories(pnp=False, bundle=True,
-                                           loop_closure=False, ground_truth=False,
-                                           only_key_frames=True, title='Division to Key frames', mark_size=0.5)
+    # pose_graph_processor.plot_relative_errors_sub_sections()
+    # pose_graph_processor.plot_relative_errors_for_all_key_frames()
+    # pose_graph_processor.absolute_pnp_estimation_error()
+    # pose_graph_processor.absolute_pose_graph_estimation_error_before_loop_closure()
+    # pose_graph_processor.absolute_pose_graph_estimation_error_after_loop_closure()
+    # pose_graph_processor.present_statistics()
+    # pose_graph_processor.plot_trajectories(pnp=False, bundle=True,
+    #                                        loop_closure=False, ground_truth=False,
+    #                                        only_key_frames=True, title='Division to Key frames', mark_size=0.5)
+    pose_graph_processor.plot_trajectories(pnp=False, bundle=False,
+                                           loop_closure=True, ground_truth=True,
+                                           only_key_frames=False, title='loop closure ground truth and landmarks',
+                                           add_landmarks=True,
+                                           mark_size=0.5)
+    pose_graph_processor.plot_trajectories(pnp=True,
+                                           bundle=True,
+                                           loop_closure=True,
+                                           ground_truth=True,
+                                           add_landmarks=True,
+                                           only_key_frames=False, title='pnp, bundle, loop closure, ground truth and landmarks',
+                                           mark_size=0.5)
