@@ -75,3 +75,73 @@ In this section, we estimate the relative movement of the car between consecutiv
 - Matching left and right image descriptors and filtering based on epipolar constraints.
 
 ![PnP Illustration](image_3_1.png)
+
+## 1. Finding an Estimated Trajectory using PnP
+
+This section involves estimating the vehicle’s relative movement between consecutive frames using the PnP algorithm. Key steps include feature extraction, matching, triangulation, and relative movement estimation.
+
+**Feature Extraction and Matching**
+- Features are extracted using the AKAZE algorithm due to its robust and memory-efficient binary descriptors.
+- The extracted features are matched between the left and right images using OpenCV, and epipolar constraints are applied for filtering.
+- Matches are filtered based on y-coordinate differences (threshold: 1.5 pixels).
+
+For implementation details, refer to the following code sections:
+- [Feature Extraction](https://github.com/AmitaiOvadia/SLAMProject/blob/main/VAN_ex/code/utils/utils.py#L66)
+- [Matching](https://github.com/AmitaiOvadia/SLAMProject/blob/main/VAN_ex/code/utils/utils.py#L116)
+
+![PnP Process Illustration](image_3_1.png)
+
+### Triangulation and PnP Estimation
+
+The matched points are triangulated using linear triangulation to obtain 3D points. This involves solving a homogeneous linear system using SVD decomposition. The PnP algorithm then estimates the relative rotation and translation between two consecutive frames using these 3D points.
+
+For more details, refer to the [Triangulation Code](https://github.com/AmitaiOvadia/SLAMProject/blob/main/VAN_ex/code/utils/utils.py#L176).
+
+![Triangulation Illustration](image_3_2.png)
+
+### RANSAC for Outlier Removal
+
+To ensure accurate relative movement estimation, the RANSAC algorithm is used for outlier detection. RANSAC iteratively selects a subset of data points, fits a model, and evaluates inliers based on the reprojection error threshold (1.5 pixels).
+
+For implementation, see [RANSAC Code](https://github.com/AmitaiOvadia/SLAMProject/blob/main/VAN_ex/code/ex3/Ex3.py#L141).
+
+## 2. Building a Features Tracking Database
+
+This step involves creating a database to track landmarks across frames, allowing efficient retrieval of tracked points. The database handles feature extraction, matching, and outlier detection using RANSAC.
+
+For code implementation, refer to [Tracking Database Code](https://github.com/AmitaiOvadia/SLAMProject/blob/main/VAN_ex/code/utils/tracking_database.py).
+
+![Feature Tracking Illustration](image_5_1.png)
+
+## 3. Performing Bundle Adjustment over Multiple Windows
+
+Bundle adjustment is performed to refine camera poses and 3D points by minimizing the reprojection error. Due to the sparsity of the problem, the sequence is divided into smaller 'bundle windows' for efficient optimization.
+
+Key implementation details can be found in the [Bundle Adjustment Code](https://github.com/AmitaiOvadia/SLAMProject/blob/main/VAN_ex/code/utils/BundleAdjusment.py).
+
+![Bundle Adjustment Result](image_5_2.png)
+
+## 4. Pose Graph Creation
+
+A pose graph is constructed to represent the relative camera poses between key frames. This compact representation is optimized to refine the estimated trajectory.
+
+For implementation, refer to [Pose Graph Code](https://github.com/AmitaiOvadia/SLAMProject/blob/main/VAN_ex/code/utils/PoseGraph.py).
+
+## 5. Refining the Pose Graph using Loop Closures
+
+Loop closures are used to correct drift by identifying previously visited locations and adding constraints to the pose graph. This helps in reducing cumulative errors in the estimated trajectory.
+
+Implementation details can be found in [Loop Closure Code](https://github.com/AmitaiOvadia/SLAMProject/blob/main/VAN_ex/code/utils/PoseGraph.py).
+
+## Performance Analysis
+
+Quantitative evaluation of the SLAM system shows improvements in absolute and relative localization errors after bundle adjustment and loop closures. The maximum localization error was reduced from 40 meters to around 5 meters after applying loop closures.
+
+
+![Absolute Localization Error](image_7_1.png)
+
+![Relative Error Analysis](image_7_2.png)
+
+## Conclusion
+
+The SLAM system demonstrated significant improvements in trajectory estimation using computer vision techniques. The use of bundle adjustment and loop closures effectively reduced the drift and enhanced the accuracy of the final trajectory estimation.
