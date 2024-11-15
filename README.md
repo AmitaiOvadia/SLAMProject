@@ -88,7 +88,7 @@ As expected, the difference in the right camera location is only 0.54 meters alo
 
 ### 🔍 Intrinsic Camera Matrix
 
-The intrinsic camera matrix projects a 3D point in the camera coordinate system to a pixel in the image plane (sensor's coordinate system). It includes the camera's intrinsic parameters, such as focal lengths in the x and y directions fx,fy, the principal point  cx,cy, as well as skew and distortion if they exist.
+The intrinsic camera matrix projects a 3D point in the camera coordinate system to a pixel in the image plane (sensor's coordinate system). It includes the camera's intrinsic parameters, such as focal lengths in the x and y directions fx,fy, the principal point  cx,cy, as well as skew if one exists.
 
 In our case, the intrinsic matrix K is:
 
