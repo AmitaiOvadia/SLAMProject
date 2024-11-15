@@ -451,6 +451,113 @@ The pose graph is initialized with only the **relative poses** between cameras a
 This compact and optimized representation is essential for refining the global trajectory and reducing drift in the final localization results.
 
 
+### 5. 🔗 Refining the Pose Graph Using Loop Closures
+
+[View the implementation here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/utils/PoseGraph.py#L21).
+
+In this step, we address the **drifting problem** caused by accumulating small errors in the relative transformations, especially in the azimuth angle. By composing these transformations, even minor inaccuracies can lead to significant drift over time.
+
+We can exploit the fact that the vehicle revisits some of its previous locations. If we recognize these revisits, we can impose additional constraints known as **loop closures**. These constraints act as "staples" or anchors, correcting the drift locally and redistributing errors across the entire pose graph.
+
+#### 🛠️ Loop Closure Process
+
+1. **Creating the Loop Closure Graph**  
+   We initialize a loop closure graph object, where each vertex represents a camera pose for a specific keyframe. The weights on the graph’s edges are based on the uncertainty between two poses p1 and p2:
+
+![image](https://github.com/user-attachments/assets/3cf00907-1954-4a20-9314-f1f949322bb6)
+
+   This weight is proportional to the volume of the covariance matrix. Each edge also stores the covariance matrix itself.  
+   [See the code here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/utils/PoseGraph.py#L353).
+
+2. **Finding Loop Closure Candidates**  
+   We use pose distance measurements to identify keyframes that are likely at the same location and orientation:
+
+   - For each keyframe, we check previous keyframes starting from 60 frames back (to avoid checking close frames).
+   - For each previous frame, we find the shortest path in the graph based on the uncertainty weights.  
+     [See the code here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/utils/PoseGraph.py#L169).
+   - We construct an approximated covariance matrix by summing the covariances of the intermediate edges.  
+     [See the code here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/utils/PoseGraph.py#L336).
+   - We compute the Mahalanobis distance:
+
+ ![image](https://github.com/user-attachments/assets/90d4a6bb-aeba-4c7b-b23f-f35c8d71d6f4)
+
+
+     [See the code here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/utils/PoseGraph.py#L346).
+   - If the Mahalanobis distance is below a threshold (750 in our case), then p_cur, p_prev are considered loop closure candidates.
+
+3. **Performing Loop Closure Optimization**  
+   After compiling the loop closure candidates for p_{cur}:
+
+   - For each candidate  p_{cand}, we find the relative pose using the PnP algorithm, discarding candidates with fewer than 50 inliers.  
+     [See the code here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/utils/PoseGraph.py#L272).
+   - Using the PnP result as the initial estimate, we perform a small bundle adjustment involving only the two cameras and retrieve the associated covariance.  
+     [See the code here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/utils/PoseGraph.py#L247).
+   - We update the pose graph by adding the new edge {p_cur, p_cand}, optimize the pose graph, and update the loop closure graph object.
+
+#### 🗺️ Results
+
+Below, you can see how the pose graph evolves as more loop closures are added, along with a comparison to the ground truth locations. The addition of loop closures significantly reduces drift and improves the overall accuracy of the trajectory estimation.
+
+
+![pasted20](https://github.com/user-attachments/assets/f4bfe4ff-2e15-4890-94b9-4136e1fd9837)
+![pasted21](https://github.com/user-attachments/assets/69affa89-8674-44ea-93ca-6e065756dbff)
+![pasted22](https://github.com/user-attachments/assets/2c594e7b-5aaf-4e99-9c25-35e5495eb715)
+![pasted23](https://github.com/user-attachments/assets/f27291b7-67a4-475d-af74-b571e91c75f1)
+
+
+
+## 📊 Performance Analysis
+
+In this section, I provide additional quantitative measures of the SLAM system.
+
+Here are graphs of the **absolute localization errors** in x, y, z, and L2 norm, after:
+
+- The initial PnP estimation.
+- The bundle adjustment (before loop closure).
+- The loop closure.
+
+The graphs illustrate the improvement in localization accuracy as we progress through each stage of the SLAM pipeline.
+
+
+![pasted28](https://github.com/user-attachments/assets/29125330-bae0-45f7-9386-4233ab8fbdc6)  ![pasted29](https://github.com/user-attachments/assets/a5d55000-cd7a-4dd2-8852-30f7c0360d1e)
+
+
+
+![pasted30](https://github.com/user-attachments/assets/1278603a-d763-41e5-8894-aa942c4cbee9)   ![pasted1](https://github.com/user-attachments/assets/88e2d7a7-4d9f-46d1-9622-f44992e35f59)
+
+
+
+
+
+It's clear from the graphs the there is a real boost in the absolute estimation accuracy after the loop closure part, the maximum error comes down from around 40 meters to around 5 meters. The reason is of course the elimination of the drift, or the accumulating error. 
+
+
+## 🔍 Relative Error Analysis
+
+In the following graphs, we focus on the **relative errors**, both in localization and in pose angles.
+
+A basic relative estimation error graph compares the relative pose estimation between two consecutive frames ![image](https://github.com/user-attachments/assets/f864c270-d074-4376-8062-1f44159271f0)
+ and the ground truth relative pose between them ![image](https://github.com/user-attachments/assets/32929d6f-0b6f-4808-a127-00293c921b18)
+
+
+![pasted31](https://github.com/user-attachments/assets/60f61ff2-6020-4f0c-b52c-c9ddbfef5313)
+
+
+![pasted32](https://github.com/user-attachments/assets/871b5a91-7b00-405e-975b-a04cae16eb30)
+
+
+![pasted33](https://github.com/user-attachments/assets/37d7ab07-5484-4c9a-81cd-54e9f5456f81)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
