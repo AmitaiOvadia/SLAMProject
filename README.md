@@ -2,10 +2,6 @@
 
 ## 🗺️ Introduction
 
-Welcome to the **Vision Aided Navigation 2024 - Final Project**! This project focuses on integrating computer vision techniques with navigation systems to enhance real-time localization and mapping capabilities. By leveraging visual data from cameras, we aim to develop robust algorithms that support accurate navigation for autonomous vehicles and other mobile platforms.
-
----
-
 This project was completed as part of the course **"67604 SLAM - Video Navigation"** at The Hebrew University of Jerusalem, taught by Mr. David Arnon and Dr. Refael Vivanti.
 
 **SLAM**, short for **Simultaneous Localization And Mapping**, involves constructing or updating a map of an unknown environment while simultaneously tracking an agent's location within it. SLAM techniques are widely used in self-driving cars, unmanned aerial vehicles, autonomous underwater vehicles, planetary rovers, advanced domestic robots, and even in medical applications inside the human body.
