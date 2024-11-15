@@ -115,27 +115,148 @@ The next step involves matching the descriptors of the left and right images, re
 
 ### ⚙️ Implementation Details
 
-- Before applying the feature detection algorithm, the image is blurred using a Gaussian kernel with \(\sigma = 1\) to reduce noise and help the feature extractor focus on more robust features. [See the code here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/utils/utils.py#L66).
+- Before applying the feature detection algorithm, the image is blurred using a Gaussian kernel with sigma = 1 to reduce noise and help the feature extractor focus on more robust features. [See the code here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/utils/utils.py#L66).
 
-- We used the OpenCV implementation of AKAZE, lowering the detection threshold from \(10^{-3}\) to \(10^{-4}\). This adjustment increases the number of features detected, compensating for the image blurring.
+- We used the OpenCV implementation of AKAZE, lowering the detection threshold from 10^-3 to 10^-4. This adjustment increases the number of features detected, compensating for the image blurring.
 
 ### 📏 Evaluating the Matches
 
-Given the epipolar 
+Given the epipolar constraints of a rectified stereo pair, we know that corresponding points must share the same y-value. We can filter out some matches using this metric by checking the y-value distance between matched points. Matches where the y-value distance exceeds **1.5 pixels** are filtered out. [See the implementation here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/utils/utils.py#L116).
+
+![pasted6](https://github.com/user-attachments/assets/dc7bd207-812a-4c97-9c3d-296fad20dfe4)
 
 
+### 🔼 Triangulation of Matched Points
+
+The next step is to **triangulate** each pair of matched points and find the corresponding 3D point for each pair.
+
+This is accomplished using **linear triangulation**, as implemented in the code [here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/utils/utils.py#L176).
+
+Let’s define the points:
+
+- x and x': The matched 2D points in the left and right images, respectively.
+- X: The corresponding 3D point.
+
+We assume that all these points are represented in **homogeneous coordinates**.
+
+![image](https://github.com/user-attachments/assets/d5070568-f1e6-4c19-a772-8dc5a637a908)
 
 
+![pasted7](https://github.com/user-attachments/assets/084c93f3-4627-4d9d-9019-33413d52a2b8)
 
 
+### 🔄 PnP Trajectory Calculation
+
+In this step, we use the previously established tools to compute the relative movement between two consecutive frames.
+
+The **PnP (Perspective-n-Point)** or **P4P** algorithm allows us to estimate the rotation and translation between two views. To use this algorithm, we need:
+
+- At least **4 3D points** and their corresponding **2D projections** in the two views.
+- The **intrinsic camera matrix** \( K \).
+
+#### 🛠️ Approach
+
+Here’s how we implemented the PnP trajectory calculation:
+
+1. **Correspondence Matching**:  
+   We identified points corresponding across the two stereo pairs by matching the points in the left cameras of both pairs. For each point in the left camera, we then found the matching point in the right camera.
+
+2. **Triangulation**:  
+   We triangulated the points in the first stereo pair’s coordinate system (which we assume to be the origin, as we are only interested in relative movement).
+
+3. **Relative Movement Calculation**:  
+   Using the **PnP algorithm**, we determined the relative movement (rotation and translation) between the left cameras of the second pair and the first pair. You can view the code implementation [here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/ex3/Ex3.py#L73).
 
 
+In the figures: an illustration of the PnP trajectory calculation, from finding points correspondences across the 2 stereo pairs, to the calculation of the relative movement using pnp 
+
+![pasted9](https://github.com/user-attachments/assets/5d07bc81-fb7b-4c95-8225-7dcd5a382ffd)
 
 
+### 🛠️ Outliers Removal Using RANSAC
+
+To ensure the accuracy of the relative movement estimation, we need to address potential outliers in our PnP calculation. We chose to handle this using the **RANSAC (Random Sample Consensus)** algorithm.
+
+**RANSAC** is an iterative method used to estimate the parameters of a mathematical model from a set of observed data containing outliers. It effectively identifies outliers, minimizing their influence on the parameter estimates ([Wikipedia](https://en.wikipedia.org/wiki/RANSAC)).
+
+#### 📥 Input to RANSAC
+
+In our case, the input to RANSAC includes:
+
+- A set of **3D points** and their corresponding **2D projections** in the left and right cameras of both stereo pairs.
+- The **intrinsic camera matrix** K.
+- The relative matrix [R|t] between the right and left cameras.
+- The desired probability that the final set of chosen points are indeed inliers.
+
+You can see the RANSAC implementation [here](https://github.com/AmitaiOvadia/SLAMProject/blob/fcafb474671f3078c2a305bfc554414367019797/VAN_ex/code/ex3/Ex3.py#L141).
+
+#### 🔁 RANSAC Iterative Process
+
+1. **Random Sampling**:  
+   A random subset of size 4 is selected from the data as hypothetical inliers (enough for the P4P algorithm).
+
+2. **Model Fitting**:  
+   The model is fitted to the subset using PnP, resulting in a relative movement matrix M from left camera 1 to left camera 0 of the form [R|t]
+
+4. **Data Testing**:  
+   All data points are tested against the fitted model. Assuming the extrinsic matrix of the left camera of the second pair is M from left camera 1 to left camera 0, we use it to find the extrinsic matrix of the right camera. We then project back all the 3D points to each of the cameras. Points with a reprojection error less than d = 1.5 pixels are considered inliers. 
+
+5. **Updating Iterations**:  
+   The number of iterations needed is updated based on the following formula:
+
+   ![image](https://github.com/user-attachments/assets/810dda0a-eb8e-49e6-87c4-71e9fa87506f)
 
 
+   - The chance that all 4 picks are inliers is  w^4.
+   - The chance that not all picks are inliers is 1 - w^4.
+   - After k iterations, the chance that not all picks are inliers is:
+
+    ![image](https://github.com/user-attachments/assets/49437302-84eb-4aaa-8930-432aafd81671)
 
 
+6. **Inliers Ratio Update**:  
+   We update the inliers ratio w during the iterations, significantly reducing the overall number of iterations.
+
+7. **Final Model Estimation**:  
+   After iterating, we select the largest subset of inliers and use it to run PnP for a refined model estimation.
+
+### 🗺️ Estimating the Entire Trajectory
+
+Now that we have all the relative movements from one frame to the next, we can compute the absolute extrinsic matrices for each frame.
+
+The composition of two extrinsic matrices is done as follows:
+
+![image](https://github.com/user-attachments/assets/a8d7f222-aa46-4b75-80ed-27cdaf63884c)
+
+
+This way, we can accurately estimate the entire trajectory of the vehicle.
+
+
+ This is how it looks like in the end of the PnP process:
+
+![pasted2](https://github.com/user-attachments/assets/a2ed382f-a563-4eaf-ab43-7486646f5327)
+
+
+As is clear from this figure, there is a substantial drift that is an attribute of the accumulating mistakes in the pose estimation. We hope to better this estimation using bundle adjustment.
+
+
+## 🔍 Bundle Adjustment: An Introduction
+
+To further refine the relative poses between consecutive stereo frames, we employ **bundle adjustment**.
+
+**Bundle adjustment** is a fundamental optimization technique in computer vision, especially in 3D reconstruction and Simultaneous Localization and Mapping (SLAM). It refines both the 3D structure and camera parameters by minimizing the **re-projection error** between the observed image points and the predicted projections across multiple views. This process iteratively adjusts the parameters of both the 3D points and the camera poses to achieve a globally optimal solution.
+
+![pasted10](https://github.com/user-attachments/assets/f1e9c9b3-eca9-40ae-bc15-03cb805c29a5)
+
+
+### 🗄️ Landmark Tracking Database
+
+To perform bundle adjustment, we first need to create a database that tracks all the detected landmarks. This database allows us to:
+
+- Efficiently find which landmarks correspond to each frame.
+- Track in which frames each landmark is observed.
+
+The initial implementation of the database was provided by **David Arnon** and was further modified to include additional functionalities. You can find the code for the database implementation [here](https://github.com/AmitaiOvadia/SLAMProject/blob/main/VAN_ex/code/utils/tracking_database.py).
 
 
 
